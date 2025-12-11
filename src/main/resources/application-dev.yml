@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: inspection-graphrag
+
+server:
+  port: 8080
+
+gdin:
+  ai:
+    doc:
+      tokenizer-type: hanlp
+      hanlp-tokenizer:
+        base-url: http://172.169.77.60:8610
+        timeout-in-seconds: 10
+    milvus:
+      uri: "http://172.169.77.62:19530"
+      token: "root:Milvus"
+      default-top-k: 10
+      default-min-score: 0.5f
+      default-dense-weight: 0.7f
+      default-sparse-weight: 0.3f
+    graph:
+      node-collection-name: "GRAPH_NODE_DEV"
+      edge-collection-name: "GRAPH_EDGE_DEV"
+      leiden:
+        base-url: http://172.169.77.60:8611

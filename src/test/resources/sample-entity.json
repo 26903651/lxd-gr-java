@@ -1,0 +1,12 @@
+{
+  "id":"ent-sample-001",
+  "human_readable_id":0,
+  "title":"城市规划法",
+  "type":"Policy",
+  "description_list":["规定城市规划程序。","用于管理土地用途。"],
+  "summary":"城市规划法用于规范城市规划与土地使用。",
+  "aliases":["城规法"],
+  "source_text_unit_ids":["doc-001_unit-0001"],
+  "metadata":{"count":2},
+  "createdAt":"2024-10-01T08:00:00Z"
+}

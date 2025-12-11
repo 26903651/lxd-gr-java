@@ -1,0 +1,50 @@
+package com.gdin.inspection.graphrag.v2.models;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Builder;
+import lombok.Value;
+import lombok.extern.jackson.Jacksonized;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+
+@Value
+@Jacksonized
+@Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class Relationship {
+    @JsonProperty("id")
+    String id;
+
+    @JsonProperty("human_readable_id")
+    Integer humanReadableId;
+
+    @JsonProperty("source")
+    String source;
+
+    @JsonProperty("target")
+    String target;
+
+    @JsonProperty("weight")
+    Double weight;
+
+    @JsonProperty("predicate")
+    String predicate;
+
+    @JsonProperty("description_list")
+    List<String> descriptionList;
+
+    @JsonProperty("summary")
+    String summary;
+
+    @JsonProperty("source_text_unit_ids")
+    List<String> sourceTextUnitIds;
+
+    @JsonProperty("metadata")
+    Map<String, Object> metadata;
+
+    @JsonProperty("createdAt")
+    Instant createdAt;
+}

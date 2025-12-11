@@ -1,0 +1,12 @@
+{
+  "id":"doc-001_unit-0001",
+  "document_id":"doc-001",
+  "text":"这是第一个文本单元。",
+  "start_offset":0,
+  "end_offset":20,
+  "tokens":10,
+  "metadata":{"page":1},
+  "embedding_id":null,
+  "createdAt":"2024-10-01T08:00:00Z",
+  "human_readable_id":0
+}
