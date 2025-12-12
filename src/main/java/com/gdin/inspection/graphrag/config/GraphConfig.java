@@ -22,13 +22,15 @@ public class GraphConfig {
 
     @PostConstruct
     private void init() {
-        initNodes();
-        initEdges();
+        initEntity();
+        initRelationship();
+        initCommunity();
+        initCommunityReport();
     }
 
-    private void initNodes() {
+    private void initEntity() {
         if (Boolean.FALSE.equals(milvusClientV2.hasCollection(HasCollectionReq.builder()
-                .collectionName(graphProperties.getNodeCollectionName())
+                .collectionName(graphProperties.getEntityCollectionName())
                 .build()))) {
             CreateCollectionReq.CollectionSchema schema = MilvusClientV2.CreateSchema();
             // 内置主键 - id
@@ -38,9 +40,14 @@ public class GraphConfig {
                     .isPrimaryKey(true)
                     .autoID(false)
                     .build());
-            // name
+            // human_readable_id
             schema.addField(AddFieldReq.builder()
-                    .fieldName("name")
+                    .fieldName("human_readable_id")
+                    .dataType(DataType.Int64)
+                    .build());
+            // title
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("title")
                     .dataType(DataType.VarChar)
                     .maxLength(65535)
                     .build());
@@ -56,9 +63,9 @@ public class GraphConfig {
                     .dataType(DataType.VarChar)
                     .maxLength(65535)
                     .build());
-            // 元数据 - source_doc_ids
+            // text_unit_ids
             schema.addField(AddFieldReq.builder()
-                    .fieldName("source_doc_ids")
+                    .fieldName("text_unit_ids")
                     .dataType(DataType.JSON)
                     .build());
             // frequency
@@ -66,75 +73,19 @@ public class GraphConfig {
                     .fieldName("frequency")
                     .dataType(DataType.Int64)
                     .build());
-            // embedding
+            // degree
             schema.addField(AddFieldReq.builder()
-                    .fieldName("embedding")
-                    .dataType(DataType.FloatVector)
-                    .dimension(1024)
+                    .fieldName("degree")
+                    .dataType(DataType.Int64)
                     .build());
-
-            // 创建索引
-            IndexParam vectorIndex = IndexParam.builder()
-                    .fieldName("embedding")
-                    .indexType(IndexParam.IndexType.HNSW)
-                    .metricType(IndexParam.MetricType.IP)
-                    .extraParams(Map.of("M", 8, "efConstruction", 64))
-                    .build();
-            List<IndexParam> indexParams = new ArrayList<>();
-            indexParams.add(vectorIndex);
-            CreateCollectionReq createCollectionReq = CreateCollectionReq.builder()
-                    .collectionName(graphProperties.getNodeCollectionName())
-                    .collectionSchema(schema)
-                    .indexParams(indexParams)
-                    .build();
-            milvusClientV2.createCollection(createCollectionReq);
-        }
-    }
-
-    private void initEdges() {
-        if (Boolean.FALSE.equals(milvusClientV2.hasCollection(HasCollectionReq.builder()
-                .collectionName(graphProperties.getEdgeCollectionName())
-                .build()))) {
-            CreateCollectionReq.CollectionSchema schema = MilvusClientV2.CreateSchema();
-            // 内置主键 - id
+            // x
             schema.addField(AddFieldReq.builder()
-                    .fieldName("id")
-                    .dataType(DataType.VarChar)
-                    .isPrimaryKey(true)
-                    .autoID(false)
+                    .fieldName("x")
+                    .dataType(DataType.Double)
                     .build());
-            // source
+            // y
             schema.addField(AddFieldReq.builder()
-                    .fieldName("source")
-                    .dataType(DataType.VarChar)
-                    .maxLength(65535)
-                    .build());
-            // target
-            schema.addField(AddFieldReq.builder()
-                    .fieldName("target")
-                    .dataType(DataType.VarChar)
-                    .maxLength(65535)
-                    .build());
-            // relation_type
-            schema.addField(AddFieldReq.builder()
-                    .fieldName("relation_type")
-                    .dataType(DataType.VarChar)
-                    .maxLength(65535)
-                    .build());
-            // description
-            schema.addField(AddFieldReq.builder()
-                    .fieldName("description")
-                    .dataType(DataType.VarChar)
-                    .maxLength(65535)
-                    .build());
-            // source_doc_ids
-            schema.addField(AddFieldReq.builder()
-                    .fieldName("source_doc_ids")
-                    .dataType(DataType.JSON)
-                    .build());
-            // frequency
-            schema.addField(AddFieldReq.builder()
-                    .fieldName("weight")
+                    .fieldName("y")
                     .dataType(DataType.Double)
                     .build());
             // embedding
@@ -154,7 +105,271 @@ public class GraphConfig {
             List<IndexParam> indexParams = new ArrayList<>();
             indexParams.add(vectorIndex);
             CreateCollectionReq createCollectionReq = CreateCollectionReq.builder()
-                    .collectionName(graphProperties.getEdgeCollectionName())
+                    .collectionName(graphProperties.getEntityCollectionName())
+                    .collectionSchema(schema)
+                    .indexParams(indexParams)
+                    .build();
+            milvusClientV2.createCollection(createCollectionReq);
+        }
+    }
+
+    private void initRelationship() {
+        if (Boolean.FALSE.equals(milvusClientV2.hasCollection(HasCollectionReq.builder()
+                .collectionName(graphProperties.getRelationshipCollectionName())
+                .build()))) {
+            CreateCollectionReq.CollectionSchema schema = MilvusClientV2.CreateSchema();
+            // 内置主键 - id
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("id")
+                    .dataType(DataType.VarChar)
+                    .isPrimaryKey(true)
+                    .autoID(false)
+                    .build());
+            // human_readable_id
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("human_readable_id")
+                    .dataType(DataType.Int64)
+                    .build());
+            // source
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("source")
+                    .dataType(DataType.VarChar)
+                    .maxLength(65535)
+                    .build());
+            // target
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("target")
+                    .dataType(DataType.VarChar)
+                    .maxLength(65535)
+                    .build());
+            // description
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("description")
+                    .dataType(DataType.VarChar)
+                    .maxLength(65535)
+                    .build());
+            // weight
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("weight")
+                    .dataType(DataType.Double)
+                    .build());
+            // combined_degree
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("combined_degree")
+                    .dataType(DataType.Double)
+                    .build());
+            // text_unit_ids
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("text_unit_ids")
+                    .dataType(DataType.JSON)
+                    .build());
+            // embedding
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("embedding")
+                    .dataType(DataType.FloatVector)
+                    .dimension(1024)
+                    .build());
+
+            // 创建索引
+            IndexParam vectorIndex = IndexParam.builder()
+                    .fieldName("embedding")
+                    .indexType(IndexParam.IndexType.HNSW)
+                    .metricType(IndexParam.MetricType.IP)
+                    .extraParams(Map.of("M", 8, "efConstruction", 64))
+                    .build();
+            List<IndexParam> indexParams = new ArrayList<>();
+            indexParams.add(vectorIndex);
+            CreateCollectionReq createCollectionReq = CreateCollectionReq.builder()
+                    .collectionName(graphProperties.getRelationshipCollectionName())
+                    .collectionSchema(schema)
+                    .indexParams(indexParams)
+                    .build();
+            milvusClientV2.createCollection(createCollectionReq);
+        }
+    }
+
+    private void initCommunity() {
+        if (Boolean.FALSE.equals(milvusClientV2.hasCollection(HasCollectionReq.builder()
+                .collectionName(graphProperties.getCommunityCollectionName())
+                .build()))) {
+            CreateCollectionReq.CollectionSchema schema = MilvusClientV2.CreateSchema();
+            // 内置主键 - id
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("id")
+                    .dataType(DataType.VarChar)
+                    .isPrimaryKey(true)
+                    .autoID(false)
+                    .build());
+            // human_readable_id
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("human_readable_id")
+                    .dataType(DataType.Int64)
+                    .build());
+            // community
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("community")
+                    .dataType(DataType.Int64)
+                    .build());
+            // level
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("level")
+                    .dataType(DataType.Int64)
+                    .build());
+            // parent
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("parent")
+                    .dataType(DataType.Int64)
+                    .build());
+            // children
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("children")
+                    .dataType(DataType.JSON)
+                    .build());
+            // title
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("title")
+                    .dataType(DataType.VarChar)
+                    .maxLength(65535)
+                    .build());
+            // entity_ids
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("entity_ids")
+                    .dataType(DataType.JSON)
+                    .build());
+            // relationship_ids
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("relationship_ids")
+                    .dataType(DataType.JSON)
+                    .build());
+            // text_unit_ids
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("text_unit_ids")
+                    .dataType(DataType.JSON)
+                    .build());
+            // period
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("period")
+                    .dataType(DataType.VarChar)
+                    .maxLength(65535)
+                    .build());
+            // size
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("size")
+                    .dataType(DataType.Int64)
+                    .build());
+            CreateCollectionReq createCollectionReq = CreateCollectionReq.builder()
+                    .collectionName(graphProperties.getCommunityCollectionName())
+                    .collectionSchema(schema)
+                    .build();
+            milvusClientV2.createCollection(createCollectionReq);
+        }
+    }
+
+    private void initCommunityReport() {
+        if (Boolean.FALSE.equals(milvusClientV2.hasCollection(HasCollectionReq.builder()
+                .collectionName(graphProperties.getCommunityReportCollectionName())
+                .build()))) {
+            CreateCollectionReq.CollectionSchema schema = MilvusClientV2.CreateSchema();
+            // 内置主键 - id
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("id")
+                    .dataType(DataType.VarChar)
+                    .isPrimaryKey(true)
+                    .autoID(false)
+                    .build());
+            // human_readable_id
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("human_readable_id")
+                    .dataType(DataType.Int64)
+                    .build());
+            // community
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("community")
+                    .dataType(DataType.Int64)
+                    .build());
+            // level
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("level")
+                    .dataType(DataType.Int64)
+                    .build());
+            // parent
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("parent")
+                    .dataType(DataType.Int64)
+                    .build());
+            // children
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("children")
+                    .dataType(DataType.JSON)
+                    .build());
+            // title
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("title")
+                    .dataType(DataType.VarChar)
+                    .maxLength(65535)
+                    .build());
+            // summary
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("summary")
+                    .dataType(DataType.VarChar)
+                    .maxLength(65535)
+                    .build());
+            // full_content
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("full_content")
+                    .dataType(DataType.VarChar)
+                    .maxLength(65535)
+                    .build());
+            // rank
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("rank")
+                    .dataType(DataType.Double)
+                    .build());
+            // rating_explanation
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("rating_explanation")
+                    .dataType(DataType.VarChar)
+                    .maxLength(65535)
+                    .build());
+            // findings
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("findings")
+                    .dataType(DataType.JSON)
+                    .build());
+            // full_content_json
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("full_content_json")
+                    .dataType(DataType.JSON)
+                    .build());
+            // period
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("period")
+                    .dataType(DataType.VarChar)
+                    .maxLength(65535)
+                    .build());
+            // size
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("size")
+                    .dataType(DataType.Int64)
+                    .build());
+            // embedding
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("embedding")
+                    .dataType(DataType.FloatVector)
+                    .dimension(1024)
+                    .build());
+
+            // 创建索引
+            IndexParam vectorIndex = IndexParam.builder()
+                    .fieldName("embedding")
+                    .indexType(IndexParam.IndexType.HNSW)
+                    .metricType(IndexParam.MetricType.IP)
+                    .extraParams(Map.of("M", 8, "efConstruction", 64))
+                    .build();
+            List<IndexParam> indexParams = new ArrayList<>();
+            indexParams.add(vectorIndex);
+            CreateCollectionReq createCollectionReq = CreateCollectionReq.builder()
+                    .collectionName(graphProperties.getCommunityReportCollectionName())
                     .collectionSchema(schema)
                     .indexParams(indexParams)
                     .build();

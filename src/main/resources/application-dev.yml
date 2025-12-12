@@ -20,7 +20,5 @@ gdin:
       default-dense-weight: 0.7f
       default-sparse-weight: 0.3f
     graph:
-      node-collection-name: "GRAPH_NODE_DEV"
-      edge-collection-name: "GRAPH_EDGE_DEV"
       leiden:
         base-url: http://172.169.77.60:8611
