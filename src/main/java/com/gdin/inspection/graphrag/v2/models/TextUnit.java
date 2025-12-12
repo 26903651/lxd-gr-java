@@ -38,8 +38,5 @@ public class TextUnit {
 
     @JsonProperty("covariate_ids")
     List<String> covariateIds;
-
-    @JsonProperty("attributes")
-    Map<String, Object> attributes;
 }
 

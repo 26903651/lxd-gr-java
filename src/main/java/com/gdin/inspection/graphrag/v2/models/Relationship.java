@@ -39,8 +39,8 @@ public class Relationship {
     @JsonProperty("summary")
     String summary;
 
-    @JsonProperty("source_text_unit_ids")
-    List<String> sourceTextUnitIds;
+    @JsonProperty("text_unit_ids")
+    List<String> textUnitIds;
 
     @JsonProperty("metadata")
     Map<String, Object> metadata;

@@ -156,7 +156,7 @@ public class CreateCommunitiesOperation {
                 if (rel.getId() != null) agg.getRelationshipIds().add(rel.getId());
 
                 // 聚合 text_unit_ids，对应 Python relationships["text_unit_ids"]
-                List<String> textUnits = rel.getSourceTextUnitIds();
+                List<String> textUnits = rel.getTextUnitIds();
                 if (CollectionUtil.isNotEmpty(textUnits)) {
                     for (String tu : textUnits) {
                         if (!StrUtil.isBlank(tu))  agg.getTextUnitIds().add(tu);

@@ -1,5 +1,6 @@
 package com.gdin.inspection.graphrag.v2.util;
 
+import cn.hutool.core.collection.CollectionUtil;
 import com.gdin.inspection.graphrag.v2.models.Covariate;
 import com.gdin.inspection.graphrag.v2.models.Entity;
 import com.gdin.inspection.graphrag.v2.models.Relationship;
@@ -22,7 +23,7 @@ public class FinalizeUtils {
                         .descriptionList(e.getDescriptionList())
                         .summary(e.getSummary())
                         .aliases(e.getAliases())
-                        .sourceTextUnitIds(e.getSourceTextUnitIds())
+                        .textUnitIds(e.getTextUnitIds())
                         .metadata(e.getMetadata())
                         .createdAt(Instant.now())
                         .build())
@@ -41,7 +42,7 @@ public class FinalizeUtils {
                         .predicate(r.getPredicate())
                         .descriptionList(r.getDescriptionList())
                         .summary(r.getSummary())
-                        .sourceTextUnitIds(r.getSourceTextUnitIds())
+                        .textUnitIds(r.getTextUnitIds())
                         .metadata(r.getMetadata())
                         .createdAt(Instant.now())
                         .build())
@@ -59,7 +60,7 @@ public class FinalizeUtils {
         // 1. text_unit_id -> entity_ids
         Map<String, Set<String>> tuToEntityIds = new HashMap<>();
         for (Entity e : entities) {
-            List<String> srcTuIds = e.getSourceTextUnitIds();
+            List<String> srcTuIds = e.getTextUnitIds();
             if (srcTuIds == null) continue;
             for (String tuId : srcTuIds) {
                 if (tuId == null) continue;
@@ -72,7 +73,7 @@ public class FinalizeUtils {
         // 2. text_unit_id -> relationship_ids
         Map<String, Set<String>> tuToRelIds = new HashMap<>();
         for (Relationship r : relationships) {
-            List<String> srcTuIds = r.getSourceTextUnitIds();
+            List<String> srcTuIds = r.getTextUnitIds();
             if (srcTuIds == null) continue;
             for (String tuId : srcTuIds) {
                 if (tuId == null) continue;
@@ -107,7 +108,7 @@ public class FinalizeUtils {
 
                     List<String> entityIds = toListOrNull(tuToEntityIds.get(id));
                     List<String> relationshipIds = toListOrNull(tuToRelIds.get(id));
-                    List<String> covariateIds = toListOrNull(tuToCovIds.get(id));
+                    List<String> covariateIds = toListOrEmpty(tuToCovIds.get(id));
 
                     return TextUnit.builder()
                             .id(id)
@@ -118,16 +119,18 @@ public class FinalizeUtils {
                             .entityIds(entityIds)
                             .relationshipIds(relationshipIds)
                             .covariateIds(covariateIds)
-                            .attributes(u.getAttributes())
                             .build();
                 })
                 .collect(Collectors.toList());
     }
 
     private static List<String> toListOrNull(Set<String> set) {
-        if (set == null || set.isEmpty()) {
-            return null;
-        }
+        if (CollectionUtil.isEmpty(set)) return null;
+        return new ArrayList<>(set);
+    }
+
+    private static List<String> toListOrEmpty(Set<String> set) {
+        if (CollectionUtil.isEmpty(set)) return Collections.emptyList();
         return new ArrayList<>(set);
     }
 }

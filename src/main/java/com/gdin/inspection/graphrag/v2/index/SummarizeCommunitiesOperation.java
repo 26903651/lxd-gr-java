@@ -131,7 +131,7 @@ public class SummarizeCommunitiesOperation {
                 Entity e = entityMap.get(id);
                 if (e == null) continue;
 
-                String sourceTextUnitIds = Optional.ofNullable(e.getSourceTextUnitIds())
+                String sourceTextUnitIds = Optional.ofNullable(e.getTextUnitIds())
                         .orElse(List.of())
                         .stream()
                         .collect(Collectors.joining("|"));
@@ -156,7 +156,7 @@ public class SummarizeCommunitiesOperation {
                 Relationship r = relationshipMap.get(id);
                 if (r == null) continue;
 
-                String sourceTextUnitIds = Optional.ofNullable(r.getSourceTextUnitIds())
+                String sourceTextUnitIds = Optional.ofNullable(r.getTextUnitIds())
                         .orElse(List.of())
                         .stream()
                         .collect(Collectors.joining("|"));

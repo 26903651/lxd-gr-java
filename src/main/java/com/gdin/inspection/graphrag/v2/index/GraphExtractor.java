@@ -138,7 +138,7 @@ public class GraphExtractor {
 
     // ---------------- 解析与合并：对齐 Python _process_results 与去重逻辑 ----------------
 
-    private ParsedResult parseRecords(String combined, String sourceTextUnitId) {
+    private ParsedResult parseRecords(String combined, String textUnitId) {
         List<Entity> entities = new ArrayList<>();
         List<Relationship> relationships = new ArrayList<>();
 
@@ -172,7 +172,7 @@ public class GraphExtractor {
                         .descriptionList(List.of(desc))
                         .summary(null)
                         .aliases(new ArrayList<>())
-                        .sourceTextUnitIds(List.of(sourceTextUnitId))
+                        .textUnitIds(List.of(textUnitId))
                         .metadata(new HashMap<>())
                         .createdAt(Instant.now())
                         .build();
@@ -201,7 +201,7 @@ public class GraphExtractor {
                         .predicate(null) // Python 默认不单独输出 predicate，这里先留空
                         .descriptionList(List.of(desc))
                         .summary(null)
-                        .sourceTextUnitIds(List.of(sourceTextUnitId))
+                        .textUnitIds(List.of(textUnitId))
                         .metadata(metadata)
                         .createdAt(Instant.now())
                         .build();
@@ -237,7 +237,7 @@ public class GraphExtractor {
                         .descriptionList(new ArrayList<>(safeList(e.getDescriptionList())))
                         .summary(null)
                         .aliases(new ArrayList<>(safeList(e.getAliases())))
-                        .sourceTextUnitIds(new ArrayList<>(safeList(e.getSourceTextUnitIds())))
+                        .textUnitIds(new ArrayList<>(safeList(e.getTextUnitIds())))
                         .metadata(e.getMetadata())
                         .createdAt(e.getCreatedAt());
                 map.put(key, builder);
@@ -246,8 +246,8 @@ public class GraphExtractor {
                 for (String d : safeList(e.getDescriptionList())) {
                     if (!desc.contains(d)) desc.add(d);
                 }
-                List<String> src = safeList(builder.build().getSourceTextUnitIds());
-                for (String s : safeList(e.getSourceTextUnitIds())) {
+                List<String> src = safeList(builder.build().getTextUnitIds());
+                for (String s : safeList(e.getTextUnitIds())) {
                     if (!src.contains(s)) src.add(s);
                 }
                 List<String> aliases = safeList(builder.build().getAliases());
@@ -284,7 +284,7 @@ public class GraphExtractor {
                         .predicate(r.getPredicate())
                         .descriptionList(new ArrayList<>(safeList(r.getDescriptionList())))
                         .summary(null)
-                        .sourceTextUnitIds(new ArrayList<>(safeList(r.getSourceTextUnitIds())))
+                        .textUnitIds(new ArrayList<>(safeList(r.getTextUnitIds())))
                         .metadata(r.getMetadata())
                         .createdAt(r.getCreatedAt());
                 map.put(key, builder);
@@ -293,8 +293,8 @@ public class GraphExtractor {
                 for (String d : safeList(r.getDescriptionList())) {
                     if (!desc.contains(d)) desc.add(d);
                 }
-                List<String> src = safeList(builder.build().getSourceTextUnitIds());
-                for (String s : safeList(r.getSourceTextUnitIds())) {
+                List<String> src = safeList(builder.build().getTextUnitIds());
+                for (String s : safeList(r.getTextUnitIds())) {
                     if (!src.contains(s)) src.add(s);
                 }
             }

@@ -92,7 +92,7 @@ public class ExtractGraphWorkflow {
                             .descriptionList(e.getDescriptionList())
                             .summary(summary)
                             .aliases(e.getAliases())
-                            .sourceTextUnitIds(e.getSourceTextUnitIds())
+                            .textUnitIds(e.getTextUnitIds())
                             .metadata(e.getMetadata())
                             .createdAt(e.getCreatedAt())
                             .build();
@@ -115,7 +115,7 @@ public class ExtractGraphWorkflow {
                             .predicate(r.getPredicate())
                             .descriptionList(r.getDescriptionList())
                             .summary(summary)
-                            .sourceTextUnitIds(r.getSourceTextUnitIds())
+                            .textUnitIds(r.getTextUnitIds())
                             .metadata(r.getMetadata())
                             .createdAt(r.getCreatedAt())
                             .build();

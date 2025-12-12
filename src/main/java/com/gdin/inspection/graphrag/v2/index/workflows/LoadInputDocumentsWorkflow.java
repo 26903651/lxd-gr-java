@@ -75,7 +75,6 @@ public class LoadInputDocumentsWorkflow {
                     .entityIds(null)                  // 这三个字段后面 finalize 再填
                     .relationshipIds(null)
                     .covariateIds(null)
-                    .attributes(metadata)
                     .build());
         }
         return textUnits;

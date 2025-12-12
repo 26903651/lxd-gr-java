@@ -36,8 +36,8 @@ public class Entity {
     @JsonProperty("aliases")
     List<String> aliases;
 
-    @JsonProperty("source_text_unit_ids")
-    List<String> sourceTextUnitIds;
+    @JsonProperty("text_unit_ids")
+    List<String> textUnitIds;
 
     @JsonProperty("metadata")
     Map<String, Object> metadata;

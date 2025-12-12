@@ -308,7 +308,7 @@ public class LocalSearchMixedContext {
             rec.put("type", e.getType());
             rec.put("summary", e.getSummary());
             rec.put("aliases", e.getAliases());
-            rec.put("source_text_unit_ids", e.getSourceTextUnitIds());
+            rec.put("text_unit_ids", e.getTextUnitIds());
             entityRecords.add(rec);
 
             entIdx++;
@@ -362,7 +362,7 @@ public class LocalSearchMixedContext {
             rec.put("predicate", r.getPredicate());
             rec.put("summary", r.getSummary());
             rec.put("weight", r.getWeight());
-            rec.put("source_text_unit_ids", r.getSourceTextUnitIds());
+            rec.put("text_unit_ids", r.getTextUnitIds());
             relationshipRecords.add(rec);
 
             relIdx++;
@@ -484,7 +484,7 @@ public class LocalSearchMixedContext {
         }
         int count = 0;
         for (Relationship r : relationships) {
-            List<String> srcTuIds = r.getSourceTextUnitIds();
+            List<String> srcTuIds = r.getTextUnitIds();
             if (srcTuIds == null || srcTuIds.isEmpty()) {
                 continue;
             }
