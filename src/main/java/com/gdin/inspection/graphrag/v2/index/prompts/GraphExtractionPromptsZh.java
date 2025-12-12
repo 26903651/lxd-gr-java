@@ -46,7 +46,7 @@ public final class GraphExtractionPromptsZh {
    - source_entity：源实体名称，必须是前面实体列表中出现过的 entity_name。
    - target_entity：目标实体名称，同样必须来自实体列表。
    - relationship_description：用一句话解释这两个实体之间的关系是什么。
-   - relationship_strength：一个数值，表示关系强度或置信度（例如 0~1 范围内的小数，或者 1~10 的整数）。
+   - relationship_strength：一个 0 到 1 之间的小数，表示你对该关系是否真实存在的主观置信度。
 3. 每条关系必须使用如下 tuple 形式表示：
    ("relationship"%s<source_entity>%s<target_entity>%s<relationship_description>%s<relationship_strength>)
 
@@ -97,16 +97,16 @@ public final class GraphExtractionPromptsZh {
 
     /**
      * Loop Prompt，对应 Python 的 LOOP_PROMPT。
-     * 作为 user message 发送，只允许返回 "Y" 或 "N"。
+     * 作为 user message 发送，只允许返回 "YES" 或 "NO"。
      */
     public static final String LOOP_PROMPT_ZH = """
 请检查到目前为止你已经抽取出的实体和关系列表，
 判断是否仍然存在需要继续补充的实体或关系。
 
-如果你认为仍然需要继续抽取，请只输出一个大写字母 Y；
-如果你认为已经没有需要补充的内容，请只输出一个大写字母 N。
+如果你认为仍然需要继续抽取，请只输出大写单词 YES；
+如果你认为已经没有需要补充的内容，请只输出大写单词 NO。
 
-不要输出除 Y 或 N 以外的任何内容，不要添加其他文字、标点或空格。
+不要输出除 YES 或 NO 以外的任何内容，不要添加其他文字、标点或空格。
 """;
 
     private GraphExtractionPromptsZh() {}

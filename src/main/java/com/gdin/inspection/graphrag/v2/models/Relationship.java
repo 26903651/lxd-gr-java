@@ -6,15 +6,14 @@ import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
 
-import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 
 @Value
 @Jacksonized
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Relationship {
+
     @JsonProperty("id")
     String id;
 
@@ -27,24 +26,15 @@ public class Relationship {
     @JsonProperty("target")
     String target;
 
+    @JsonProperty("description")
+    String description;
+
     @JsonProperty("weight")
     Double weight;
 
-    @JsonProperty("predicate")
-    String predicate;
-
-    @JsonProperty("description_list")
-    List<String> descriptionList;
-
-    @JsonProperty("summary")
-    String summary;
+    @JsonProperty("combined_degree")
+    Double combinedDegree;
 
     @JsonProperty("text_unit_ids")
     List<String> textUnitIds;
-
-    @JsonProperty("metadata")
-    Map<String, Object> metadata;
-
-    @JsonProperty("createdAt")
-    Instant createdAt;
 }

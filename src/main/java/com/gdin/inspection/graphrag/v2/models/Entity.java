@@ -6,15 +6,14 @@ import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
 
-import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 
 @Value
 @Jacksonized
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Entity {
+
     @JsonProperty("id")
     String id;
 
@@ -27,21 +26,21 @@ public class Entity {
     @JsonProperty("type")
     String type;
 
-    @JsonProperty("description_list")
-    List<String> descriptionList;
-
-    @JsonProperty("summary")
-    String summary;
-
-    @JsonProperty("aliases")
-    List<String> aliases;
+    @JsonProperty("description")
+    String description;
 
     @JsonProperty("text_unit_ids")
     List<String> textUnitIds;
 
-    @JsonProperty("metadata")
-    Map<String, Object> metadata;
+    @JsonProperty("frequency")
+    Integer frequency;
 
-    @JsonProperty("createdAt")
-    Instant createdAt;
+    @JsonProperty("degree")
+    Integer degree;
+
+    @JsonProperty("x")
+    Double x;
+
+    @JsonProperty("y")
+    Double y;
 }

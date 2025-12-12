@@ -15,30 +15,25 @@ import java.util.Map;
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Document {
+
     @JsonProperty("id")
     String id;
+
+    @JsonProperty("human_readable_id")
+    Integer humanReadableId;
 
     @JsonProperty("title")
     String title;
 
-    @JsonProperty("source")
-    String source;
+    @JsonProperty("text")
+    String text;
 
-    @JsonProperty("content")
-    String content;
+    @JsonProperty("text_unit_ids")
+    List<String> textUnitIds;
+
+    @JsonProperty("creation_date")
+    Instant creationDate;
 
     @JsonProperty("metadata")
     Map<String, Object> metadata;
-
-    @JsonProperty("createdAt")
-    Instant createdAt;
-
-    @JsonProperty("language")
-    String language;
-
-    @JsonProperty("tags")
-    List<String> tags;
-
-    @JsonProperty("human_readable_id")
-    Integer humanReadableId;
 }

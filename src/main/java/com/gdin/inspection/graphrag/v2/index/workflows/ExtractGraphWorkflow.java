@@ -3,9 +3,14 @@ package com.gdin.inspection.graphrag.v2.index.workflows;
 import cn.hutool.core.collection.CollectionUtil;
 import com.gdin.inspection.graphrag.v2.index.GraphExtractor;
 import com.gdin.inspection.graphrag.v2.index.SummarizeDescriptionsOperation;
-import com.gdin.inspection.graphrag.v2.models.*;
+import com.gdin.inspection.graphrag.v2.models.Entity;
+import com.gdin.inspection.graphrag.v2.models.EntityDescriptionSummary;
+import com.gdin.inspection.graphrag.v2.models.Relationship;
+import com.gdin.inspection.graphrag.v2.models.RelationshipDescriptionSummary;
+import com.gdin.inspection.graphrag.v2.models.TextUnit;
 import com.gdin.inspection.graphrag.v2.util.FinalizeUtils;
 import jakarta.annotation.Resource;
+import lombok.Getter;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -13,10 +18,11 @@ import java.util.stream.Collectors;
 
 /**
  * 等价于 Python 的 index/workflows/extract_graph.py：
- * - 调用 GraphExtractor 抽取实体 / 关系
- * - 保留一份 rawEntities / rawRelationships（无 summary）
- * - 调用 SummarizeDescriptionsOperation 生成描述摘要
- * - 按 title / (source, target) 把 summary merge 回实体 / 关系
+ * 1）调用 GraphExtractor，从 text_units 抽取实体 / 关系并做合并统计
+ * 2）复制一份 rawEntities / rawRelationships（在摘要前的版本）
+ * 3）调用 SummarizeDescriptionsOperation，对实体 / 关系的描述做 LLM 摘要
+ * 4）把摘要写回 Entity/Relationship.description 字段
+ * 5）调用 FinalizeUtils 分配 id / human_readable_id
  */
 @Service
 public class ExtractGraphWorkflow {
@@ -28,36 +34,47 @@ public class ExtractGraphWorkflow {
     private SummarizeDescriptionsOperation summarizeDescriptionsOperation;
 
     /**
-     * 主入口：对 TextUnit 列表执行「抽图 + 摘要」。
+     * 主入口：对 TextUnit 列表执行「抽图 + 描述摘要 + finalize」。
      *
-     * @param textUnits                    文本单元列表
-     * @param entityTypes                  实体类型提示字符串（例如："单位, 部门, 岗位, 人员, 制度文件, 法律法规, 问题类型, 业务事项"）
-     * @param entitySummaryMaxWords        实体摘要最大字数（粗略控制）
-     * @param relationshipSummaryMaxWords  关系摘要最大字数（粗略控制）
+     * @param textUnits                   文本单元列表
+     * @param entityTypes                 实体类型提示字符串（例如："单位, 部门, 岗位, 人员, 制度文件, 法律法规, 问题类型, 业务事项"）
+     * @param entitySummaryMaxWords       实体描述摘要长度上限（粗略）
+     * @param relationshipSummaryMaxWords 关系描述摘要长度上限（粗略）
      */
     public Result run(List<TextUnit> textUnits,
                       String entityTypes,
                       int entitySummaryMaxWords,
                       int relationshipSummaryMaxWords) {
 
-        if (CollectionUtil.isEmpty(textUnits)) throw new IllegalArgumentException("textUnits 不能为空");
+        if (CollectionUtil.isEmpty(textUnits)) {
+            throw new IllegalArgumentException("textUnits 不能为空");
+        }
 
-        // 1. 调 GraphExtractor：等价于 Python extractor(...)
-        GraphExtractor.ExtractionResult extractionResult = graphExtractor.extract(textUnits, entityTypes);
+        // 1. 调 GraphExtractor：等价 Python extract_graph.extract_graph() 的合并结果
+        GraphExtractor.ExtractionResult extractionResult =
+                graphExtractor.extract(textUnits, entityTypes);
 
-        List<Entity> extractedEntities = safeList(extractionResult.getEntities());
-        List<Relationship> extractedRelationships = safeList(extractionResult.getRelationships());
+        List<Entity> extractedEntities =
+                Optional.ofNullable(extractionResult.getEntities()).orElseGet(Collections::emptyList);
+        List<Relationship> extractedRelationships =
+                Optional.ofNullable(extractionResult.getRelationships()).orElseGet(Collections::emptyList);
 
-        if (extractedEntities.isEmpty()) throw new IllegalStateException("实体抽取失败：未检测到任何实体");
-        if (extractedRelationships.isEmpty()) throw new IllegalStateException("关系抽取失败：未检测到任何关系");
+        if (extractedEntities.isEmpty()) {
+            throw new IllegalStateException("实体抽取失败：未检测到任何实体");
+        }
+        if (extractedRelationships.isEmpty()) {
+            throw new IllegalStateException("关系抽取失败：未检测到任何关系");
+        }
 
-        // 2. rawEntities / rawRelationships：在加 summary 前拷贝一份（等价于 DataFrame.copy()）
+        // 2. rawEntities / rawRelationships：摘要前的拷贝（等价于 DataFrame.copy()）
         List<Entity> rawEntities = new ArrayList<>(extractedEntities);
         List<Relationship> rawRelationships = new ArrayList<>(extractedRelationships);
 
-        // 3. 调 SummarizeDescriptionsOperation：等价于 Python summarize_descriptions(...)
-        List<EntityDescriptionSummary> entitySummaries = summarizeDescriptionsOperation.summarizeEntities(extractedEntities, entitySummaryMaxWords);
-        List<RelationshipDescriptionSummary> relationshipSummaries = summarizeDescriptionsOperation.summarizeRelationships(extractedRelationships, relationshipSummaryMaxWords);
+        // 3. 调 SummarizeDescriptionsOperation：等价 Python summarize_descriptions(...)
+        List<EntityDescriptionSummary> entitySummaries =
+                summarizeDescriptionsOperation.summarizeEntities(extractedEntities, entitySummaryMaxWords);
+        List<RelationshipDescriptionSummary> relationshipSummaries =
+                summarizeDescriptionsOperation.summarizeRelationships(extractedRelationships, relationshipSummaryMaxWords);
 
         // 4. 建索引：title -> summary；(source,target) -> summary
         Map<String, String> titleToSummary = entitySummaries.stream()
@@ -65,7 +82,6 @@ public class ExtractGraphWorkflow {
                 .collect(Collectors.toMap(
                         EntityDescriptionSummary::getTitle,
                         EntityDescriptionSummary::getSummary,
-                        // 如果出现重复 title，简单选择第一条（正常情况下不会有）
                         (a, b) -> a,
                         LinkedHashMap::new
                 ));
@@ -79,57 +95,53 @@ public class ExtractGraphWorkflow {
                         LinkedHashMap::new
                 ));
 
-        // 5. 把 summary merge 回实体，然后执行 finalize（分配 id / human_readable_id）
+        // 5. 把摘要写回实体 description，然后 finalize（分配 id / human_readable_id）
         List<Entity> entitiesWithSummary = extractedEntities.stream()
                 .map(e -> {
                     String title = e.getTitle();
-                    String summary = titleToSummary.getOrDefault(title, e.getSummary());
+                    String summary = titleToSummary.get(title);
+                    String finalDescription = summary != null ? summary : e.getDescription();
                     return Entity.builder()
-                            .id(null)  // 这里先不设 id，交给 FinalizeUtils 统一生成
+                            .id(null)                    // 交给 FinalizeUtils 统一生成
                             .humanReadableId(null)
                             .title(e.getTitle())
                             .type(e.getType())
-                            .descriptionList(e.getDescriptionList())
-                            .summary(summary)
-                            .aliases(e.getAliases())
+                            .description(finalDescription)
                             .textUnitIds(e.getTextUnitIds())
-                            .metadata(e.getMetadata())
-                            .createdAt(e.getCreatedAt())
+                            .frequency(e.getFrequency())
+                            .degree(e.getDegree())
+                            .x(e.getX())
+                            .y(e.getY())
                             .build();
                 })
                 .collect(Collectors.toList());
 
-        // 关键：真正 finalize，一次性生成 UUID 和 human_readable_id
         List<Entity> finalizedEntities = FinalizeUtils.finalizeEntities(entitiesWithSummary);
 
-        // 6. 把 summary merge 回关系，然后执行 finalize（分配 id / human_readable_id）
+        // 6. 把摘要写回关系 description，然后 finalize
         List<Relationship> relationshipsWithSummary = extractedRelationships.stream()
                 .map(r -> {
                     String key = buildRelKey(r.getSource(), r.getTarget());
-                    String summary = relKeyToSummary.getOrDefault(key, r.getSummary());
+                    String summary = relKeyToSummary.get(key);
+                    String finalDescription = summary != null ? summary : r.getDescription();
                     return Relationship.builder()
                             .id(null)
                             .humanReadableId(null)
                             .source(r.getSource())
                             .target(r.getTarget())
-                            .predicate(r.getPredicate())
-                            .descriptionList(r.getDescriptionList())
-                            .summary(summary)
+                            .description(finalDescription)
+                            .weight(r.getWeight())
+                            .combinedDegree(r.getCombinedDegree())
                             .textUnitIds(r.getTextUnitIds())
-                            .metadata(r.getMetadata())
-                            .createdAt(r.getCreatedAt())
                             .build();
                 })
                 .collect(Collectors.toList());
 
-        List<Relationship> finalizedRelationships = FinalizeUtils.finalizeRelationships(relationshipsWithSummary);
+        List<Relationship> finalizedRelationships =
+                FinalizeUtils.finalizeRelationships(relationshipsWithSummary);
 
-        // 7. 返回结果
+        // 7. 返回结果：等价 Python extract_graph() 返回的四个 DataFrame
         return new Result(finalizedEntities, finalizedRelationships, rawEntities, rawRelationships);
-    }
-
-    private static <T> List<T> safeList(List<T> list) {
-        return list == null ? Collections.emptyList() : list;
     }
 
     private static String buildRelKey(String sourceId, String targetId) {
@@ -141,6 +153,7 @@ public class ExtractGraphWorkflow {
     /**
      * 对应 Python extract_graph workflow 返回的四个 DataFrame。
      */
+    @Getter
     public static class Result {
         private List<Entity> entities;
         private List<Relationship> relationships;
@@ -159,20 +172,5 @@ public class ExtractGraphWorkflow {
             this.rawRelationships = rawRelationships;
         }
 
-        public List<Entity> getEntities() {
-            return entities;
-        }
-
-        public List<Relationship> getRelationships() {
-            return relationships;
-        }
-
-        public List<Entity> getRawEntities() {
-            return rawEntities;
-        }
-
-        public List<Relationship> getRawRelationships() {
-            return rawRelationships;
-        }
     }
 }

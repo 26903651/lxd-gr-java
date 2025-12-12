@@ -51,7 +51,7 @@ public class LoadInputDocumentsWorkflow {
             JSONObject metadata1 = ((JSONObject) o1).getJSONObject("metadata");
             JSONObject metadata2 = ((JSONObject) o2).getJSONObject("metadata");
             String documentId1 = metadata1.getString("document_id");
-            String documentId2 = metadata1.getString("document_id");
+            String documentId2 = metadata2.getString("document_id");
             if(Objects.equals(documentId1, documentId2)) {
                 Integer page1 = metadata1.getInteger("page");
                 Integer page2 = metadata2.getInteger("page");

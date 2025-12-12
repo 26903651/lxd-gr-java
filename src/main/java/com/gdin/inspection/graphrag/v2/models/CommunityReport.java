@@ -45,8 +45,8 @@ public class CommunityReport {
     @JsonProperty("full_content")
     String fullContent;
 
-    @JsonProperty("rating")
-    Double rating;
+    @JsonProperty("rank")
+    Double rank;
 
     @JsonProperty("rating_explanation")
     String ratingExplanation;
@@ -64,16 +64,4 @@ public class CommunityReport {
 
     @JsonProperty("size")
     Integer size;
-
-    @JsonProperty("generated_at")
-    Instant generatedAt;
-
-    @JsonProperty("source_entity_ids")
-    List<String> sourceEntityIds;
-
-    @JsonProperty("source_text_unit_ids")
-    List<String> sourceTextUnitIds;
-
-    @JsonProperty("metadata")
-    Map<String, Object> metadata;
 }

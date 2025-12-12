@@ -6,12 +6,22 @@ import com.gdin.inspection.graphrag.v2.models.Entity;
 import com.gdin.inspection.graphrag.v2.models.Relationship;
 import com.gdin.inspection.graphrag.v2.models.TextUnit;
 
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+/**
+ * 对齐 Python finalize 阶段：
+ * - 为 entity / relationship / text_unit 分配 id & human_readable_id
+ * - 根据实体 / 关系 / 协变量，反向填充 text_unit_ids 上的引用字段
+ */
 public class FinalizeUtils {
+
+    /**
+     * 为实体分配 id / human_readable_id，保留其它统计字段。
+     * 最终列对应：id, human_readable_id, title, type, description,
+     *              text_unit_ids, degree, frequency, x, y
+     */
     public static List<Entity> finalizeEntities(List<Entity> dedupedEntities) {
         AtomicInteger idx = new AtomicInteger(0);
         return dedupedEntities.stream()
@@ -20,16 +30,21 @@ public class FinalizeUtils {
                         .humanReadableId(idx.getAndIncrement())
                         .title(e.getTitle())
                         .type(e.getType())
-                        .descriptionList(e.getDescriptionList())
-                        .summary(e.getSummary())
-                        .aliases(e.getAliases())
+                        .description(e.getDescription())
                         .textUnitIds(e.getTextUnitIds())
-                        .metadata(e.getMetadata())
-                        .createdAt(Instant.now())
+                        .frequency(e.getFrequency())
+                        .degree(e.getDegree())
+                        .x(e.getX())
+                        .y(e.getY())
                         .build())
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 为关系分配 id / human_readable_id。
+     * 最终列对应：id, human_readable_id, source, target,
+     *            description, weight, combined_degree, text_unit_ids
+     */
     public static List<Relationship> finalizeRelationships(List<Relationship> relationships) {
         AtomicInteger idx = new AtomicInteger(0);
         return relationships.stream()
@@ -38,17 +53,18 @@ public class FinalizeUtils {
                         .humanReadableId(idx.getAndIncrement())
                         .source(r.getSource())
                         .target(r.getTarget())
-                        .weight(r.getWeight())           // ← 这里把 weight 透传下去
-                        .predicate(r.getPredicate())
-                        .descriptionList(r.getDescriptionList())
-                        .summary(r.getSummary())
+                        .description(r.getDescription())
+                        .weight(r.getWeight())
+                        .combinedDegree(r.getCombinedDegree())
                         .textUnitIds(r.getTextUnitIds())
-                        .metadata(r.getMetadata())
-                        .createdAt(Instant.now())
                         .build())
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 根据实体 / 关系 / 协变量，反推每个 TextUnit 对应的 entity_ids / relationship_ids / covariate_ids，
+     * 并分配 text_unit 的 human_readable_id。
+     */
     public static List<TextUnit> finalizeTextUnits(
             List<TextUnit> units,
             List<Entity> entities,
@@ -87,7 +103,7 @@ public class FinalizeUtils {
         Map<String, Set<String>> tuToCovIds = new HashMap<>();
         if (covariates != null) {
             for (Covariate c : covariates) {
-                String tuId = c.getSourceTextUnitId();
+                String tuId = c.getTextUnitId();  // 注意：新版 Covariate 字段
                 if (tuId == null) continue;
                 tuToCovIds
                         .computeIfAbsent(tuId, k -> new LinkedHashSet<>())
@@ -101,7 +117,6 @@ public class FinalizeUtils {
                     String id = u.getId();
 
                     List<String> documentIds = u.getDocumentIds();
-                    // 如果前面流程保证一定有 documentIds，这里可以直接用 u.getDocumentIds()
                     if (documentIds == null || documentIds.isEmpty()) {
                         documentIds = null;
                     }

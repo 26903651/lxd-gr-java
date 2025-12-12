@@ -185,6 +185,9 @@ public class CreateCommunitiesOperation {
             List<String> relationshipIds = new ArrayList<>(agg.getRelationshipIds());
             List<String> textUnitIds = new ArrayList<>(agg.getTextUnitIds());
 
+            // 完全对齐 Python 的 inner join 语义 —— 没有实体就跳过这个社区
+            if (entityIds.isEmpty()) continue;
+
             // 对齐 Python 的 sorted(set(...))
             Collections.sort(entityIds);
             Collections.sort(relationshipIds);
@@ -237,9 +240,6 @@ public class CreateCommunitiesOperation {
                     .textUnitIds(row.getTextUnitIds())
                     .period(period)
                     .size(row.getEntityIds().size())
-                    .summary(null)        // 后续社区报告生成再填
-                    .metadata(null)
-                    .createdAt(now)
                     .build();
 
             result.add(community);

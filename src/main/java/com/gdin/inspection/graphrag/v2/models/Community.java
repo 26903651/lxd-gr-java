@@ -52,13 +52,4 @@ public class Community {
 
     @JsonProperty("size")
     Integer size;
-
-    @JsonProperty("summary")
-    String summary;
-
-    @JsonProperty("metadata")
-    Map<String, Object> metadata;
-
-    @JsonProperty("createdAt")
-    Instant createdAt;
 }

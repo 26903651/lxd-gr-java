@@ -1,6 +1,6 @@
 package com.gdin.inspection.graphrag.v2.index;
 
-import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.util.StrUtil;
 import com.gdin.inspection.graphrag.v2.models.Entity;
 import com.gdin.inspection.graphrag.v2.models.EntityDescriptionSummary;
 import com.gdin.inspection.graphrag.v2.models.Relationship;
@@ -18,31 +18,37 @@ public class SummarizeDescriptionsOperation {
     private DescriptionSummaryExtractor extractor;
 
     /**
-     * 对实体做描述摘要，对齐 Python 的 entity_summaries 表。
+     * 对实体做描述摘要，对齐 Python 的 entity_summaries 表：
+     * 输入：抽取阶段合并后的 Entity（description 为多条描述按换行拼接）
+     * 输出：每个 title -> 一条 summary。
      */
     public List<EntityDescriptionSummary> summarizeEntities(List<Entity> entities, int maxWords) {
         if (entities == null || entities.isEmpty()) {
             return Collections.emptyList();
         }
 
-        // 以 title 为 key 聚合（如果你之前已经去重，这里基本是一对一）
+        // 以 title 为 key 聚合
         Map<String, List<String>> titleToDescriptions = new LinkedHashMap<>();
 
         for (Entity entity : entities) {
             String title = entity.getTitle();
-            List<String> descList = entity.getDescriptionList();
-            if (title == null) continue;
-            if (CollectionUtil.isEmpty(descList)) continue;
+            String desc = entity.getDescription();
+            if (StrUtil.isBlank(title) || StrUtil.isBlank(desc)) {
+                continue;
+            }
+
+            List<String> pieces = splitDescription(desc);
+            if (pieces.isEmpty()) continue;
 
             titleToDescriptions
                     .computeIfAbsent(title, k -> new ArrayList<>())
-                    .addAll(descList);
+                    .addAll(pieces);
         }
 
         List<EntityDescriptionSummary> result = new ArrayList<>();
         for (Map.Entry<String, List<String>> entry : titleToDescriptions.entrySet()) {
             String title = entry.getKey();
-            // 去重一下，和 Python 的 sorted(set(...)) 行为类似
+
             List<String> descs = entry.getValue().stream()
                     .filter(Objects::nonNull)
                     .map(String::trim)
@@ -64,25 +70,30 @@ public class SummarizeDescriptionsOperation {
     /**
      * 对关系做描述摘要，对齐 Python 的 relationship_summaries 表。
      */
-    public List<RelationshipDescriptionSummary> summarizeRelationships(List<Relationship> relationships, int maxWords) {
+    public List<RelationshipDescriptionSummary> summarizeRelationships(List<Relationship> relationships,
+                                                                       int maxWords) {
         if (relationships == null || relationships.isEmpty()) {
             return Collections.emptyList();
         }
 
-        // 以 (sourceEntityId, targetEntityId) 为 key 聚合
+        // 以 (source, target) 为 key 聚合
         Map<String, List<String>> keyToDescriptions = new LinkedHashMap<>();
 
         for (Relationship rel : relationships) {
             String source = rel.getSource();
             String target = rel.getTarget();
-            List<String> descList = rel.getDescriptionList();
-            if (source == null || target == null) continue;
-            if (CollectionUtil.isEmpty(descList)) continue;
+            String desc = rel.getDescription();
+            if (StrUtil.isBlank(source) || StrUtil.isBlank(target) || StrUtil.isBlank(desc)) {
+                continue;
+            }
+
+            List<String> pieces = splitDescription(desc);
+            if (pieces.isEmpty()) continue;
 
             String key = source + "||" + target;
             keyToDescriptions
                     .computeIfAbsent(key, k -> new ArrayList<>())
-                    .addAll(descList);
+                    .addAll(pieces);
         }
 
         List<RelationshipDescriptionSummary> result = new ArrayList<>();
@@ -99,7 +110,8 @@ public class SummarizeDescriptionsOperation {
                     .distinct()
                     .collect(Collectors.toList());
 
-            String idForPrompt = "源实体ID=" + sourceId + "，目标实体ID=" + targetId;
+            // 纯提示用 id，和 Python 一样只是个标签
+            String idForPrompt = "源实体=" + sourceId + "，目标实体=" + targetId;
             String summary = extractor.summarize(idForPrompt, descs, maxWords);
 
             result.add(RelationshipDescriptionSummary.builder()
@@ -110,5 +122,16 @@ public class SummarizeDescriptionsOperation {
         }
 
         return result;
+    }
+
+    /**
+     * 把 GraphExtractor 合并好的 description（换行/分号拼起来）拆成多条。
+     */
+    private List<String> splitDescription(String description) {
+        if (StrUtil.isBlank(description)) return Collections.emptyList();
+        return Arrays.stream(description.split("[\\n；]+"))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
     }
 }
