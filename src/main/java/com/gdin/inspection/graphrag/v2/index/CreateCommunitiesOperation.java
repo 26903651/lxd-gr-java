@@ -7,6 +7,7 @@ import com.gdin.inspection.graphrag.v2.index.cluster.LeidenCluster;
 import com.gdin.inspection.graphrag.v2.models.Community;
 import com.gdin.inspection.graphrag.v2.models.Entity;
 import com.gdin.inspection.graphrag.v2.models.Relationship;
+import com.gdin.inspection.graphrag.v2.storage.GraphRagIndexStorage;
 import jakarta.annotation.Resource;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +35,9 @@ public class CreateCommunitiesOperation {
 
     @Resource
     private GraphClusterClient graphClusterClient;
+
+    @Resource
+    private GraphRagIndexStorage graphRagIndexStorage;
 
     /**
      * 主入口：对实体 + 关系做社区划分。

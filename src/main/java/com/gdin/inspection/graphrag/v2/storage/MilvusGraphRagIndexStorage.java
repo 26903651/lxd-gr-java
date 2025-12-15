@@ -4,19 +4,20 @@ import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.StrUtil;
 import com.gdin.inspection.graphrag.config.properties.GraphProperties;
 import com.gdin.inspection.graphrag.util.MilvusUtil;
-import com.gdin.inspection.graphrag.v2.models.Community;
-import com.gdin.inspection.graphrag.v2.models.CommunityReport;
-import com.gdin.inspection.graphrag.v2.models.Entity;
-import com.gdin.inspection.graphrag.v2.models.Relationship;
+import com.gdin.inspection.graphrag.v2.models.*;
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 把 GraphRAG 的几个“表”写入 Milvus：
@@ -39,6 +40,8 @@ public class MilvusGraphRagIndexStorage {
 
     @Resource
     private GraphProperties graphProperties;
+
+    private final Gson gson = new Gson();
 
 
     /* ========== entities.parquet -> ENTITY_COLLECTION ========== */
@@ -187,6 +190,42 @@ public class MilvusGraphRagIndexStorage {
         log.info("saveCommunityReports: 已写入 {} 条社区报告到 {}", rows.size(), graphProperties.getCommunityReportCollectionName());
     }
 
+    public void saveCovariates(List<Covariate> covariates) throws InterruptedException {
+        if (covariates == null || covariates.isEmpty()) {
+            log.info("saveCovariates: 没有 covariates 需要写入");
+            return;
+        }
+
+        List<JsonObject> rows = new ArrayList<>(covariates.size());
+        for (Covariate c : covariates) {
+            if (c == null) continue;
+            JsonObject obj = new JsonObject();
+
+            safeAddString(obj, "id", c.getId());
+            safeAddInt(obj, "human_readable_id", c.getHumanReadableId());
+            safeAddString(obj, "covariate_type", c.getCovariateType());
+            safeAddString(obj, "type", c.getType());
+            safeAddString(obj, "description", c.getDescription());
+            safeAddString(obj, "subject_id", c.getSubjectId());
+            safeAddString(obj, "object_id", c.getObjectId());
+            safeAddString(obj, "status", c.getStatus());
+            safeAddInstantAsString(obj, "start_date", c.getStartDate());
+            safeAddInstantAsString(obj, "end_date", c.getEndDate());
+            safeAddString(obj, "source_text", c.getSourceText());
+            safeAddString(obj, "text_unit_id", c.getTextUnitId());
+
+            // 向量：description 优先，其次 source_text
+            String embedText = !StrUtil.isBlank(c.getDescription()) ? c.getDescription() : c.getSourceText();
+            safeAddEmbedding(obj, "embedding", embedText);
+
+            rows.add(obj);
+        }
+
+        milvusUtil.insertByBatch(graphProperties.getCovariateCollectionName(), rows);
+        log.info("saveCovariates: 已写入 {} 条到 {}", rows.size(), graphProperties.getCovariateCollectionName());
+    }
+
+
     /* =================== 小工具方法 =================== */
 
     private void safeAddString(JsonObject obj, String field, String value) {
@@ -227,5 +266,19 @@ public class MilvusGraphRagIndexStorage {
             arr.add(v);
         }
         if (!arr.isEmpty()) obj.add(field, arr);
+    }
+
+    private void safeAddInstantAsString(JsonObject obj, String field, Instant value) {
+        if (value != null) obj.addProperty(field, value.toString()); // ISO-8601
+    }
+
+    private void safeAddMetadata(JsonObject obj, String field, Map<String, Object> metadata) {
+        if (metadata == null || metadata.isEmpty()) return;
+        JsonElement tree = gson.toJsonTree(metadata);
+        if (tree != null && tree.isJsonObject()) {
+            obj.add(field, tree.getAsJsonObject());
+        } else if (tree != null) {
+            obj.add(field, tree);
+        }
     }
 }

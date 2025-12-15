@@ -8,6 +8,7 @@ import com.gdin.inspection.graphrag.v2.models.CommunityReport;
 import com.gdin.inspection.graphrag.v2.models.Entity;
 import com.gdin.inspection.graphrag.v2.models.Relationship;
 import com.gdin.inspection.graphrag.v2.models.TextUnit;
+import com.gdin.inspection.graphrag.v2.storage.GraphRagIndexStorage;
 import com.gdin.inspection.graphrag.v2.util.JsonUtils;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,10 @@ public class SummarizeCommunitiesOperation {
 
     @Resource
     private CommunityReportsExtractor communityReportsExtractor;
+
+    // 新增：Milvus 持久化
+    @Resource
+    private GraphRagIndexStorage graphRagIndexStorage;
 
     private final ObjectMapper objectMapper = JsonUtils.mapper();
 
@@ -123,6 +128,13 @@ public class SummarizeCommunitiesOperation {
                 allReports.add(reportRow);
                 structuredByCommunityId.put(communityId, result);
             }
+        }
+
+        // === 把社区报告写入 Milvus ===
+        try {
+            graphRagIndexStorage.saveCommunityReports(allReports);
+        } catch (Exception e) {
+            log.error("保存 community_reports 到 Milvus 失败，但不影响索引流程继续", e);
         }
 
         return allReports;

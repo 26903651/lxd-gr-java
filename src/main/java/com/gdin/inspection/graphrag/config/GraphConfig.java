@@ -26,6 +26,7 @@ public class GraphConfig {
         initRelationship();
         initCommunity();
         initCommunityReport();
+        initCovariate();
     }
 
     private void initEntity() {
@@ -370,6 +371,108 @@ public class GraphConfig {
             indexParams.add(vectorIndex);
             CreateCollectionReq createCollectionReq = CreateCollectionReq.builder()
                     .collectionName(graphProperties.getCommunityReportCollectionName())
+                    .collectionSchema(schema)
+                    .indexParams(indexParams)
+                    .build();
+            milvusClientV2.createCollection(createCollectionReq);
+        }
+    }
+
+    private void initCovariate() {
+        if (Boolean.FALSE.equals(milvusClientV2.hasCollection(HasCollectionReq.builder()
+                .collectionName(graphProperties.getCovariateCollectionName())
+                .build()))) {
+            CreateCollectionReq.CollectionSchema schema = MilvusClientV2.CreateSchema();
+            // 内置主键 - id
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("id")
+                    .dataType(DataType.VarChar)
+                    .isPrimaryKey(true)
+                    .autoID(false)
+                    .build());
+            // human_readable_id
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("human_readable_id")
+                    .dataType(DataType.Int64)
+                    .build());
+            // covariate_type
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("covariate_type")
+                    .dataType(DataType.VarChar)
+                    .maxLength(65535)
+                    .build());
+            // type
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("type")
+                    .dataType(DataType.VarChar)
+                    .maxLength(65535)
+                    .build());
+            // description
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("description")
+                    .dataType(DataType.VarChar)
+                    .maxLength(65535)
+                    .build());
+            // subject_id
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("subject_id")
+                    .dataType(DataType.VarChar)
+                    .maxLength(65535)
+                    .build());
+            // object_id
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("object_id")
+                    .dataType(DataType.VarChar)
+                    .maxLength(65535)
+                    .build());
+            // status
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("status")
+                    .dataType(DataType.VarChar)
+                    .maxLength(65535)
+                    .build());
+            // start_date
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("start_date")
+                    .dataType(DataType.VarChar)
+                    .maxLength(65535)
+                    .build());
+            // end_date
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("end_date")
+                    .dataType(DataType.VarChar)
+                    .maxLength(65535)
+                    .build());
+            // source_text
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("source_text")
+                    .dataType(DataType.VarChar)
+                    .maxLength(65535)
+                    .build());
+            // text_unit_id
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("text_unit_id")
+                    .dataType(DataType.VarChar)
+                    .maxLength(65535)
+                    .build());
+            // embedding
+            schema.addField(AddFieldReq.builder()
+                    .fieldName("embedding")
+                    .dataType(DataType.FloatVector)
+                    .dimension(1024)
+                    .build());
+
+            // 创建索引
+            IndexParam vectorIndex = IndexParam.builder()
+                    .fieldName("embedding")
+                    .indexType(IndexParam.IndexType.HNSW)
+                    .metricType(IndexParam.MetricType.IP)
+                    .extraParams(Map.of("M", 8, "efConstruction", 64))
+                    .build();
+            List<IndexParam> indexParams = new ArrayList<>();
+            indexParams.add(vectorIndex);
+            CreateCollectionReq createCollectionReq = CreateCollectionReq.builder()
+                    .collectionName(graphProperties.getCovariateCollectionName())
                     .collectionSchema(schema)
                     .indexParams(indexParams)
                     .build();

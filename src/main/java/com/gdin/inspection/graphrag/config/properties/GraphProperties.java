@@ -14,6 +14,8 @@ public class GraphProperties implements Serializable {
     private String relationshipCollectionName = "GRAPH_RAG_RELATIONSHIP";
     private String communityCollectionName = "GRAPH_RAG_COMMUNITY";
     private String communityReportCollectionName = "GRAPH_RAG_COMMUNITY_REPORT";
+    private String covariateCollectionName = "GRAPH_RAG_COVARIATE";
+    private String contentCollectionName = "AP_KNOWLEDGE_CONTENT_DEV";
     private Leiden leiden = new Leiden();
 
     private Extraction extraction = new Extraction();

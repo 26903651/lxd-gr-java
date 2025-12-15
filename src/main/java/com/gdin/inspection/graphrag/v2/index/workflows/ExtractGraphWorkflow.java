@@ -11,6 +11,7 @@ import com.gdin.inspection.graphrag.v2.models.TextUnit;
 import com.gdin.inspection.graphrag.v2.util.FinalizeUtils;
 import jakarta.annotation.Resource;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
  * 4）把摘要写回 Entity/Relationship.description 字段
  * 5）调用 FinalizeUtils 分配 id / human_readable_id
  */
+@Slf4j
 @Service
 public class ExtractGraphWorkflow {
 
@@ -43,21 +45,26 @@ public class ExtractGraphWorkflow {
      */
     public Result run(List<TextUnit> textUnits,
                       String entityTypes,
-                      int entitySummaryMaxWords,
-                      int relationshipSummaryMaxWords) {
+                      Integer entitySummaryMaxWords,
+                      Integer relationshipSummaryMaxWords) {
+        if (CollectionUtil.isEmpty(textUnits)) throw new IllegalStateException("textUnits 不能为空");
 
-        if (CollectionUtil.isEmpty(textUnits)) {
-            throw new IllegalArgumentException("textUnits 不能为空");
-        }
+        entitySummaryMaxWords = entitySummaryMaxWords == null ? 150 : entitySummaryMaxWords;
+        relationshipSummaryMaxWords = relationshipSummaryMaxWords == null ? 150 : relationshipSummaryMaxWords;
+
+        log.info(
+                "开始抽取实体和关系：textUnits={}, entityTypes=\"{}\", entitySummaryMaxWords={}, relationshipSummaryMaxWords={}",
+                textUnits.size(),
+                entityTypes,
+                entitySummaryMaxWords,
+                relationshipSummaryMaxWords
+        );
 
         // 1. 调 GraphExtractor：等价 Python extract_graph.extract_graph() 的合并结果
-        GraphExtractor.ExtractionResult extractionResult =
-                graphExtractor.extract(textUnits, entityTypes);
+        GraphExtractor.ExtractionResult extractionResult = graphExtractor.extract(textUnits, entityTypes);
 
-        List<Entity> extractedEntities =
-                Optional.ofNullable(extractionResult.getEntities()).orElseGet(Collections::emptyList);
-        List<Relationship> extractedRelationships =
-                Optional.ofNullable(extractionResult.getRelationships()).orElseGet(Collections::emptyList);
+        List<Entity> extractedEntities = Optional.ofNullable(extractionResult.getEntities()).orElseGet(Collections::emptyList);
+        List<Relationship> extractedRelationships = Optional.ofNullable(extractionResult.getRelationships()).orElseGet(Collections::emptyList);
 
         if (extractedEntities.isEmpty()) {
             throw new IllegalStateException("实体抽取失败：未检测到任何实体");
@@ -71,10 +78,8 @@ public class ExtractGraphWorkflow {
         List<Relationship> rawRelationships = new ArrayList<>(extractedRelationships);
 
         // 3. 调 SummarizeDescriptionsOperation：等价 Python summarize_descriptions(...)
-        List<EntityDescriptionSummary> entitySummaries =
-                summarizeDescriptionsOperation.summarizeEntities(extractedEntities, entitySummaryMaxWords);
-        List<RelationshipDescriptionSummary> relationshipSummaries =
-                summarizeDescriptionsOperation.summarizeRelationships(extractedRelationships, relationshipSummaryMaxWords);
+        List<EntityDescriptionSummary> entitySummaries = summarizeDescriptionsOperation.summarizeEntities(extractedEntities, entitySummaryMaxWords);
+        List<RelationshipDescriptionSummary> relationshipSummaries = summarizeDescriptionsOperation.summarizeRelationships(extractedRelationships, relationshipSummaryMaxWords);
 
         // 4. 建索引：title -> summary；(source,target) -> summary
         Map<String, String> titleToSummary = entitySummaries.stream()

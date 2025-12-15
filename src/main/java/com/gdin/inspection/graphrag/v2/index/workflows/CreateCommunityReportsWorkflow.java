@@ -11,7 +11,6 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -42,24 +41,13 @@ public class CreateCommunityReportsWorkflow {
             List<Entity> entities,
             List<Relationship> relationships,
             List<TextUnit> textUnits,
-            int maxReportLength
+            Integer maxReportLength
     ) {
-        if (CollectionUtil.isEmpty(communities)) {
-            log.warn("createCommunityReports: communities 为空，直接返回空列表");
-            return Collections.emptyList();
-        }
-        if (CollectionUtil.isEmpty(entities)) {
-            log.warn("createCommunityReports: entities 为空，直接返回空列表");
-            return Collections.emptyList();
-        }
-        if (CollectionUtil.isEmpty(relationships)) {
-            log.warn("createCommunityReports: relationships 为空，直接返回空列表");
-            return Collections.emptyList();
-        }
-        if (CollectionUtil.isEmpty(textUnits)) {
-            log.warn("createCommunityReports: textUnits 为空，直接返回空列表");
-            return Collections.emptyList();
-        }
+        if (CollectionUtil.isEmpty(communities)) throw new IllegalStateException("communities 不能为空");
+        if (CollectionUtil.isEmpty(entities)) throw new IllegalStateException("entities 不能为空");
+        if (CollectionUtil.isEmpty(relationships)) throw new IllegalStateException("relationships 不能为空");
+        if (CollectionUtil.isEmpty(textUnits)) throw new IllegalStateException("textUnits 不能为空");
+        maxReportLength = maxReportLength == null ? 2500 : maxReportLength;
 
         log.info(
                 "开始生成社区报告：communities={}, entities={}, relationships={}, textUnits={}",

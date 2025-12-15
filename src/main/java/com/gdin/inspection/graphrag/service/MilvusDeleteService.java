@@ -28,4 +28,16 @@ public class MilvusDeleteService {
                 .build();
         milvusClientV2.delete(deleteReq);
     }
+
+    public void deleteByFilter(String collectionName, String filter) {
+        DeleteReq deleteReq = DeleteReq.builder()
+                .collectionName(collectionName)
+                .filter(filter)
+                .build();
+        milvusClientV2.delete(deleteReq);
+    }
+
+    public void deleteAll(String collectionName) {
+        deleteByFilter(collectionName, "id != \"\"");
+    }
 }

@@ -1,13 +1,16 @@
 package com.gdin.inspection.graphrag.v2.index.workflows;
 
+import cn.hutool.core.collection.CollectionUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.gdin.inspection.graphrag.config.properties.GraphProperties;
 import com.gdin.inspection.graphrag.req.milvus.MilvusQueryReq;
 import com.gdin.inspection.graphrag.service.MilvusSearchService;
 import com.gdin.inspection.graphrag.v2.models.TextUnit;
 import com.gdin.inspection.graphrag.v2.util.TokenUtil;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -18,8 +21,12 @@ import java.util.*;
  *
  * 语义和 Python 版本一致：这里只做切分与保存，不分配 human_readable_id（由 finalize 负责）。
  */
+@Slf4j
 @Service
 public class LoadInputDocumentsWorkflow {
+    @Resource
+    private GraphProperties graphProperties;
+
     @Resource
     private MilvusSearchService milvusSearchService;
 
@@ -32,6 +39,13 @@ public class LoadInputDocumentsWorkflow {
      * @return 生成的 TextUnit 列表（按文档顺序）
      */
     public List<TextUnit> run(Collection<String> documentIds) throws IOException {
+        if (CollectionUtil.isEmpty(documentIds)) throw new IllegalStateException("documentIds 不能为空");
+
+        log.info(
+                "开始提取文本单元：documentIds={}",
+                documentIds.size()
+        );
+
         // 从向量库获取切片
         StringBuilder filter = new StringBuilder();
         filter.append("metadata[\"segment_type\"]==\"father\" and metadata[\"document_id\"] in [");
@@ -41,7 +55,7 @@ public class LoadInputDocumentsWorkflow {
         filter.deleteCharAt(filter.length() - 1);
         filter.append("]");
         String queryResult = milvusSearchService.query(MilvusQueryReq.builder()
-                .collectionName("AP_KNOWLEDGE_CONTENT_DEV")
+                .collectionName(graphProperties.getContentCollectionName())
                 .filter(filter.toString())
                 .outputFields(List.of("metadata", "page_content"))
                 .build());
