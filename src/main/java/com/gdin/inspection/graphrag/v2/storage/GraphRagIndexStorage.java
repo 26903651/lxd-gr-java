@@ -32,11 +32,7 @@ public interface GraphRagIndexStorage {
 
     // ===== 文本单元 & 文档 =====
 
-    void saveTextUnits(List<TextUnit> textUnits);
-
     List<TextUnit> loadTextUnits();
-
-    void saveDocuments(List<Document> documents);
 
     List<Document> loadDocuments();
 
@@ -55,10 +51,4 @@ public interface GraphRagIndexStorage {
     void saveCovariates(List<Covariate> covariates);
 
     List<Covariate> loadCovariates();
-
-    // ===== 向量（可选，看你 Embedding 的用处）=====
-
-    void saveEmbeddings(List<Embedding> embeddings);
-
-    List<Embedding> loadEmbeddings();
 }

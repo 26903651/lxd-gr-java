@@ -1,8 +1,9 @@
-package com.gdin.inspection.graphrag.v2.index;
+package com.gdin.inspection.graphrag.v2.index.opertation;
 
 import cn.hutool.core.util.IdUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gdin.inspection.graphrag.v2.index.opertation.extract.CommunityReportsExtractor;
 import com.gdin.inspection.graphrag.v2.models.Community;
 import com.gdin.inspection.graphrag.v2.models.CommunityReport;
 import com.gdin.inspection.graphrag.v2.models.Entity;

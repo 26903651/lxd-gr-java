@@ -1,8 +1,8 @@
 package com.gdin.inspection.graphrag.v2.index.workflows;
 
 import cn.hutool.core.collection.CollectionUtil;
-import com.gdin.inspection.graphrag.v2.index.GraphExtractor;
-import com.gdin.inspection.graphrag.v2.index.SummarizeDescriptionsOperation;
+import com.gdin.inspection.graphrag.v2.index.opertation.extract.GraphExtractor;
+import com.gdin.inspection.graphrag.v2.index.opertation.SummarizeDescriptionsOperation;
 import com.gdin.inspection.graphrag.v2.models.Entity;
 import com.gdin.inspection.graphrag.v2.models.EntityDescriptionSummary;
 import com.gdin.inspection.graphrag.v2.models.Relationship;
@@ -176,6 +176,5 @@ public class ExtractGraphWorkflow {
             this.rawEntities = rawEntities;
             this.rawRelationships = rawRelationships;
         }
-
     }
 }

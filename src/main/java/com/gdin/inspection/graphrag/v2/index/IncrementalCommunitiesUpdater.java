@@ -1,5 +1,7 @@
 package com.gdin.inspection.graphrag.v2.index;
 
+import com.gdin.inspection.graphrag.v2.index.opertation.UpdateCommunitiesOperation;
+import com.gdin.inspection.graphrag.v2.index.opertation.UpdateCommunityReportsOperation;
 import com.gdin.inspection.graphrag.v2.index.update.CommunityUpdateUtils;
 import com.gdin.inspection.graphrag.v2.models.Community;
 import com.gdin.inspection.graphrag.v2.models.CommunityReport;

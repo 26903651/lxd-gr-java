@@ -1,4 +1,4 @@
-package com.gdin.inspection.graphrag.v2.index;
+package com.gdin.inspection.graphrag.v2.index.opertation;
 
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.StrUtil;

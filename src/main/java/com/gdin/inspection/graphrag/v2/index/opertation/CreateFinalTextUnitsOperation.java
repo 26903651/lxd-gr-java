@@ -1,4 +1,4 @@
-package com.gdin.inspection.graphrag.v2.index;
+package com.gdin.inspection.graphrag.v2.index.opertation;
 
 import cn.hutool.core.collection.CollectionUtil;
 import com.gdin.inspection.graphrag.v2.models.Covariate;

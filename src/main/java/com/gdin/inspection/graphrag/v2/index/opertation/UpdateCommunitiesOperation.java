@@ -1,4 +1,4 @@
-package com.gdin.inspection.graphrag.v2.index;
+package com.gdin.inspection.graphrag.v2.index.opertation;
 
 import com.gdin.inspection.graphrag.v2.index.update.CommunityUpdateUtils;
 import com.gdin.inspection.graphrag.v2.index.update.CommunityUpdateUtils.CommunitiesMergeResult;

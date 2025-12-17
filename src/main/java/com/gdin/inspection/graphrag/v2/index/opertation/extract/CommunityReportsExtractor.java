@@ -1,4 +1,4 @@
-package com.gdin.inspection.graphrag.v2.index;
+package com.gdin.inspection.graphrag.v2.index.opertation.extract;
 
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
@@ -7,6 +7,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gdin.inspection.graphrag.assistant.ThinkAssistant;
 import com.gdin.inspection.graphrag.service.AssistantGenerator;
 import com.gdin.inspection.graphrag.util.SseUtil;
+import com.gdin.inspection.graphrag.v2.index.opertation.CommunityReportResponse;
+import com.gdin.inspection.graphrag.v2.index.opertation.CommunityReportsResult;
+import com.gdin.inspection.graphrag.v2.index.FindingModel;
 import com.gdin.inspection.graphrag.v2.index.prompts.CommunityReportPromptsZh;
 import com.gdin.inspection.graphrag.v2.util.JsonUtils;
 import dev.langchain4j.service.TokenStream;

@@ -1,6 +1,7 @@
 package com.gdin.inspection.graphrag.config;
 
 import com.gdin.inspection.graphrag.config.properties.GraphProperties;
+import com.gdin.inspection.graphrag.v2.index.pipeline.PipelineFactory;
 import io.milvus.v2.client.MilvusClientV2;
 import io.milvus.v2.common.DataType;
 import io.milvus.v2.common.IndexParam;
@@ -9,6 +10,7 @@ import io.milvus.v2.service.collection.request.CreateCollectionReq;
 import io.milvus.v2.service.collection.request.HasCollectionReq;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.*;
@@ -27,6 +29,11 @@ public class GraphConfig {
         initCommunity();
         initCommunityReport();
         initCovariate();
+    }
+
+    @Bean
+    protected PipelineFactory<Object> pipelineFactory() {
+        return new PipelineFactory<>();
     }
 
     private void initEntity() {

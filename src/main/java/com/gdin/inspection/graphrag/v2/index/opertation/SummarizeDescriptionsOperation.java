@@ -1,6 +1,7 @@
-package com.gdin.inspection.graphrag.v2.index;
+package com.gdin.inspection.graphrag.v2.index.opertation;
 
 import cn.hutool.core.util.StrUtil;
+import com.gdin.inspection.graphrag.v2.index.opertation.extract.DescriptionSummaryExtractor;
 import com.gdin.inspection.graphrag.v2.models.Entity;
 import com.gdin.inspection.graphrag.v2.models.EntityDescriptionSummary;
 import com.gdin.inspection.graphrag.v2.models.Relationship;

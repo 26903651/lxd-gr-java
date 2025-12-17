@@ -1,7 +1,7 @@
 package com.gdin.inspection.graphrag.v2.index.workflows;
 
 import cn.hutool.core.collection.CollectionUtil;
-import com.gdin.inspection.graphrag.v2.index.CreateFinalTextUnitsOperation;
+import com.gdin.inspection.graphrag.v2.index.opertation.CreateFinalTextUnitsOperation;
 import com.gdin.inspection.graphrag.v2.models.*;
 import com.gdin.inspection.graphrag.v2.storage.KnowledgeSliceWriteBackService;
 import jakarta.annotation.Resource;

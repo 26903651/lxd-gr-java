@@ -36,6 +36,10 @@ public class IOUtil {
         simpleMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 
+    public static <T> T convertValue(Object fromValue, Class<T> clazz) throws IOException {
+        return objectMapper.convertValue(fromValue, clazz);
+    }
+
     public static String jsonSerialize(Object obj) throws JsonProcessingException {
         return jsonSerialize(obj, false);
     }

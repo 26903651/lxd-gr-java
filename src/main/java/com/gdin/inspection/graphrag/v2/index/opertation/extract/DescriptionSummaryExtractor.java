@@ -1,4 +1,4 @@
-package com.gdin.inspection.graphrag.v2.index;
+package com.gdin.inspection.graphrag.v2.index.opertation.extract;
 
 import cn.hutool.core.util.IdUtil;
 import com.gdin.inspection.graphrag.assistant.ThinkAssistant;

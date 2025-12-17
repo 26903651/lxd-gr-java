@@ -1,5 +1,6 @@
 package com.gdin.inspection.graphrag.v2.storage;
 
+import cn.hutool.core.collection.CollectionUtil;
 import com.gdin.inspection.graphrag.config.properties.GraphProperties;
 import com.gdin.inspection.graphrag.req.milvus.MilvusQueryReq;
 import com.gdin.inspection.graphrag.service.MilvusSearchService;
@@ -16,8 +17,6 @@ import java.util.*;
 @Service
 public class KnowledgeSliceWriteBackService {
 
-    private static final Gson gson = new GsonBuilder().create();
-
     @Resource
     private GraphProperties graphProperties;
 
@@ -33,7 +32,7 @@ public class KnowledgeSliceWriteBackService {
      * 注意：这里假设 TextUnit.id 就是知识库切片的主键 id（强烈建议你在 LoadInputDocumentsWorkflow 查询时把 outputFields 加上 "id" 并用它赋值 TextUnit.id）
      */
     public void writeBackToKnowledgeBase(List<TextUnit> finalTextUnits) {
-        if (finalTextUnits == null || finalTextUnits.isEmpty()) return;
+        if (CollectionUtil.isEmpty(finalTextUnits)) return;
 
         // 1) 建 docId -> finalTextUnit 映射
         Map<String, TextUnit> docIdToFinal = new LinkedHashMap<>();
@@ -53,7 +52,7 @@ public class KnowledgeSliceWriteBackService {
         for (List<String> docIdBatch : docIdBatches) {
             StringBuilder filter = new StringBuilder();
             filter.append("metadata[\"doc_id\"] in [");
-            for (String docId : docIds) {
+            for (String docId : docIdBatch) {
                 filter.append("\"").append(docId).append("\"").append(",");
             }
             filter.deleteCharAt(filter.length() - 1);
@@ -61,9 +60,9 @@ public class KnowledgeSliceWriteBackService {
             String queryJson = milvusSearchService.query(MilvusQueryReq.builder()
                     .collectionName(graphProperties.getContentCollectionName())
                     .filter(filter.toString())
-                    .outputFields(List.of("id", "metadata", "extra"))
+                    .outputFields(List.of("id", "metadata", "extra", "graph_main", "graph_document_ids", "graph_entity_ids", "graph_relationship_ids", "graph_covariate_ids"))
                     .build());
-            arr.add(JsonParser.parseString(queryJson).getAsJsonArray());
+            arr.addAll(JsonParser.parseString(queryJson).getAsJsonArray());
         }
 
         // 3) 组装 upsert 数据
@@ -74,20 +73,22 @@ public class KnowledgeSliceWriteBackService {
             TextUnit finalTu = docIdToFinal.get(docId);
             if (finalTu == null) continue;
 
-            JsonObject extra = row.has("extra") && row.get("extra").isJsonObject()
-                    ? row.getAsJsonObject("extra")
-                    : new JsonObject();
+            JsonObject extra = row.has("extra") ? row.getAsJsonObject("extra") : new JsonObject();
+            extra.addProperty("graph", "1");
 
-            // 覆盖/补充字段：对齐 Python TEXT_UNITS_FINAL_COLUMNS 的核心字段
-            extra.addProperty("human_readable_id", finalTu.getHumanReadableId() == null ? -1 : finalTu.getHumanReadableId());
-            extra.add("entity_ids", toJsonArray(finalTu.getEntityIds()));
-            extra.add("relationship_ids", toJsonArray(finalTu.getRelationshipIds()));
-            extra.add("covariate_ids", toJsonArray(finalTu.getCovariateIds()));
+            JsonObject graphMain = row.has("graph_main") ? row.getAsJsonObject("graph_main") : new JsonObject();
+            graphMain.addProperty("human_readable_id", finalTu.getHumanReadableId() == null ? -1 : finalTu.getHumanReadableId());
+            graphMain.addProperty("n_tokens", finalTu.getNTokens());
 
             Long id = row.getAsJsonPrimitive("id").getAsLong();
             JsonObject upsertRow = new JsonObject();
             upsertRow.addProperty("id", id);
             upsertRow.add("extra", extra);
+            upsertRow.add("graph_main", graphMain);
+            upsertRow.add("graph_document_ids", toJsonArray(finalTu.getDocumentIds()));
+            upsertRow.add("graph_entity_ids", toJsonArray(finalTu.getEntityIds()));
+            upsertRow.add("graph_relationship_ids", toJsonArray(finalTu.getRelationshipIds()));
+            upsertRow.add("graph_covariate_ids", toJsonArray(finalTu.getCovariateIds()));
             upserts.add(upsertRow);
         }
 

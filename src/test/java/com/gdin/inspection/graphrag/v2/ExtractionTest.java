@@ -2,10 +2,10 @@ package com.gdin.inspection.graphrag.v2;
 
 import cn.hutool.core.io.FileUtil;
 import com.gdin.inspection.graphrag.util.IOUtil;
-import com.gdin.inspection.graphrag.v2.index.CreateCommunitiesOperation;
-import com.gdin.inspection.graphrag.v2.index.GraphExtractor;
-import com.gdin.inspection.graphrag.v2.index.SummarizeDescriptionsOperation;
-import com.gdin.inspection.graphrag.v2.index.SummarizeCommunitiesOperation;
+import com.gdin.inspection.graphrag.v2.index.opertation.CreateCommunitiesOperation;
+import com.gdin.inspection.graphrag.v2.index.opertation.extract.GraphExtractor;
+import com.gdin.inspection.graphrag.v2.index.opertation.SummarizeDescriptionsOperation;
+import com.gdin.inspection.graphrag.v2.index.opertation.SummarizeCommunitiesOperation;
 import com.gdin.inspection.graphrag.v2.index.cluster.GraphClusterClient;
 import com.gdin.inspection.graphrag.v2.index.cluster.LeidenCluster;
 import com.gdin.inspection.graphrag.v2.index.workflows.ExtractGraphWorkflow;

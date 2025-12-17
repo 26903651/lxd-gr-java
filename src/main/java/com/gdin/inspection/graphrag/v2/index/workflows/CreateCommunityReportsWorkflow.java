@@ -1,7 +1,7 @@
 package com.gdin.inspection.graphrag.v2.index.workflows;
 
 import cn.hutool.core.collection.CollectionUtil;
-import com.gdin.inspection.graphrag.v2.index.SummarizeCommunitiesOperation;
+import com.gdin.inspection.graphrag.v2.index.opertation.SummarizeCommunitiesOperation;
 import com.gdin.inspection.graphrag.v2.models.Community;
 import com.gdin.inspection.graphrag.v2.models.CommunityReport;
 import com.gdin.inspection.graphrag.v2.models.Entity;
