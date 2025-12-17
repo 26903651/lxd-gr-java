@@ -53,11 +53,11 @@ public class PersistIndexWorkflow {
         );
 
         // 先清空, 注意textUnits不能清空
-        milvusDeleteService.deleteAll(graphProperties.getCovariateCollectionName());
-        milvusDeleteService.deleteAll(graphProperties.getCommunityReportCollectionName());
-        milvusDeleteService.deleteAll(graphProperties.getCommunityCollectionName());
-        milvusDeleteService.deleteAll(graphProperties.getRelationshipCollectionName());
-        milvusDeleteService.deleteAll(graphProperties.getEntityCollectionName());
+        milvusDeleteService.deleteAll(graphProperties.getCollectionNames().getCovariateCollectionName());
+        milvusDeleteService.deleteAll(graphProperties.getCollectionNames().getCommunityReportCollectionName());
+        milvusDeleteService.deleteAll(graphProperties.getCollectionNames().getCommunityCollectionName());
+        milvusDeleteService.deleteAll(graphProperties.getCollectionNames().getRelationshipCollectionName());
+        milvusDeleteService.deleteAll(graphProperties.getCollectionNames().getEntityCollectionName());
 
         // 保存
         milvusStorage.saveEntities(entities);

@@ -58,7 +58,7 @@ public class KnowledgeSliceWriteBackService {
             filter.deleteCharAt(filter.length() - 1);
             filter.append("]");
             String queryJson = milvusSearchService.query(MilvusQueryReq.builder()
-                    .collectionName(graphProperties.getContentCollectionName())
+                    .collectionName(graphProperties.getCollectionNames().getContentCollectionName())
                     .filter(filter.toString())
                     .outputFields(List.of("id", "metadata", "extra", "graph_main", "graph_document_ids", "graph_entity_ids", "graph_relationship_ids", "graph_covariate_ids"))
                     .build());
@@ -98,9 +98,9 @@ public class KnowledgeSliceWriteBackService {
         }
 
         // 4) upsert 回去
-        milvusUtil.upsertByBatch(graphProperties.getContentCollectionName(), upserts);
+        milvusUtil.upsertByBatch(graphProperties.getCollectionNames().getContentCollectionName(), upserts);
 
-        log.info("writeBackToKnowledgeBase: 已写回 {} 条切片 metadata 到 {}", upserts.size(), graphProperties.getContentCollectionName());
+        log.info("writeBackToKnowledgeBase: 已写回 {} 条切片 metadata 到 {}", upserts.size(), graphProperties.getCollectionNames().getContentCollectionName());
     }
 
     private JsonArray toJsonArray(List<String> list) {

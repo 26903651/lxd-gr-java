@@ -3,6 +3,7 @@ package com.gdin.inspection.graphrag.v2.index.workflows;
 import cn.hutool.core.collection.CollectionUtil;
 import com.gdin.inspection.graphrag.v2.index.opertation.extract.GraphExtractor;
 import com.gdin.inspection.graphrag.v2.index.opertation.SummarizeDescriptionsOperation;
+import com.gdin.inspection.graphrag.v2.index.strategy.ExtractGraphStrategy;
 import com.gdin.inspection.graphrag.v2.models.Entity;
 import com.gdin.inspection.graphrag.v2.models.EntityDescriptionSummary;
 import com.gdin.inspection.graphrag.v2.models.Relationship;
@@ -38,40 +39,50 @@ public class ExtractGraphWorkflow {
     /**
      * 主入口：对 TextUnit 列表执行「抽图 + 描述摘要 + finalize」。
      *
-     * @param textUnits                   文本单元列表
-     * @param entityTypes                 实体类型提示字符串（例如："单位, 部门, 岗位, 人员, 制度文件, 法律法规, 问题类型, 业务事项"）
-     * @param entitySummaryMaxWords       实体描述摘要长度上限（粗略）
-     * @param relationshipSummaryMaxWords 关系描述摘要长度上限（粗略）
      */
-    public Result run(List<TextUnit> textUnits,
-                      String entityTypes,
-                      Integer entitySummaryMaxWords,
-                      Integer relationshipSummaryMaxWords) {
+    public Result run(
+            List<TextUnit> textUnits,
+            Integer maxGleanings,
+            String tupleDelimiter,
+            String recordDelimiter,
+            String completionDelimiter,
+            String extractionPrompt,
+            List<String> entityTypesOrNames,
+            Integer entitySummaryMaxWords,
+            Integer relationshipSummaryMaxWords
+    ) {
         if (CollectionUtil.isEmpty(textUnits)) throw new IllegalStateException("textUnits 不能为空");
 
         entitySummaryMaxWords = entitySummaryMaxWords == null ? 150 : entitySummaryMaxWords;
         relationshipSummaryMaxWords = relationshipSummaryMaxWords == null ? 150 : relationshipSummaryMaxWords;
 
         log.info(
-                "开始抽取实体和关系：textUnits={}, entityTypes=\"{}\", entitySummaryMaxWords={}, relationshipSummaryMaxWords={}",
+                "开始抽取实体和关系：textUnits={}, entitySummaryMaxWords={}, relationshipSummaryMaxWords={}",
                 textUnits.size(),
-                entityTypes,
                 entitySummaryMaxWords,
                 relationshipSummaryMaxWords
         );
 
+        // Python：entity_types is None -> DEFAULT_ENTITY_TYPES
+        List<String> entitySpecs = CollectionUtil.isEmpty(entityTypesOrNames) ? GraphExtractor.DEFAULT_ENTITY_TYPES_ZH : entityTypesOrNames;
+
+        // 直接贴合 Python 的 strategy_config 字段与默认 delimiter
+        ExtractGraphStrategy strategy = ExtractGraphStrategy.builder()
+                .maxGleanings(maxGleanings)
+                .tupleDelimiter(tupleDelimiter)
+                .recordDelimiter(recordDelimiter)
+                .completionDelimiter(completionDelimiter)
+                .extractionPrompt(extractionPrompt)
+                .build();
+
         // 1. 调 GraphExtractor：等价 Python extract_graph.extract_graph() 的合并结果
-        GraphExtractor.ExtractionResult extractionResult = graphExtractor.extract(textUnits, entityTypes);
+        GraphExtractor.ExtractionResult extractionResult = graphExtractor.extract(textUnits, entitySpecs, strategy);
 
         List<Entity> extractedEntities = Optional.ofNullable(extractionResult.getEntities()).orElseGet(Collections::emptyList);
         List<Relationship> extractedRelationships = Optional.ofNullable(extractionResult.getRelationships()).orElseGet(Collections::emptyList);
 
-        if (extractedEntities.isEmpty()) {
-            throw new IllegalStateException("实体抽取失败：未检测到任何实体");
-        }
-        if (extractedRelationships.isEmpty()) {
-            throw new IllegalStateException("关系抽取失败：未检测到任何关系");
-        }
+        if (extractedEntities.isEmpty()) throw new IllegalStateException("实体抽取失败：未检测到任何实体");
+        if (extractedRelationships.isEmpty()) throw new IllegalStateException("关系抽取失败：未检测到任何关系");
 
         // 2. rawEntities / rawRelationships：摘要前的拷贝（等价于 DataFrame.copy()）
         List<Entity> rawEntities = new ArrayList<>(extractedEntities);

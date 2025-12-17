@@ -55,7 +55,7 @@ public class LoadInputDocumentsWorkflow {
         filter.deleteCharAt(filter.length() - 1);
         filter.append("]");
         String queryResult = milvusSearchService.query(MilvusQueryReq.builder()
-                .collectionName(graphProperties.getContentCollectionName())
+                .collectionName(graphProperties.getCollectionNames().getContentCollectionName())
                 .filter(filter.toString())
                 .outputFields(List.of("metadata", "page_content"))
                 .build());

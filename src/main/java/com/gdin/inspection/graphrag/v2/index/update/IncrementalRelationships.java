@@ -79,7 +79,7 @@ public class IncrementalRelationships {
             // description: list(str)
             List<String> descList = group.stream()
                     .map(Relationship::getDescription)
-                    .map(DescriptionListCodec::decode)  // 允许 old 里已经是 JSON 数组字符串
+                    .map(StringListJsonCodec::decode)  // 允许 old 里已经是 JSON 数组字符串
                     .flatMap(List::stream)
                     .map(s -> s == null ? "null" : s)
                     .collect(Collectors.toList());
@@ -111,7 +111,7 @@ public class IncrementalRelationships {
                     .humanReadableId(first.getHumanReadableId())
                     .source(first.getSource())
                     .target(first.getTarget())
-                    .description(DescriptionListCodec.encode(descList)) // ✅ 用 JSON 数组字符串承载 list[str]
+                    .description(StringListJsonCodec.encode(descList)) // ✅ 用 JSON 数组字符串承载 list[str]
                     .textUnitIds(textUnitIds)
                     .weight(weightMean)
                     .combinedDegree(combinedDegreeSum)

@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.StrUtil;
 import com.gdin.inspection.graphrag.v2.index.opertation.ExtractCovariatesOperation;
 import com.gdin.inspection.graphrag.v2.index.opertation.extract.ExtractClaimsExtractor;
+import com.gdin.inspection.graphrag.v2.index.strategy.ExtractClaimsStrategy;
 import com.gdin.inspection.graphrag.v2.models.Covariate;
 import com.gdin.inspection.graphrag.v2.models.TextUnit;
 import jakarta.annotation.Resource;
@@ -44,25 +45,23 @@ public class ExtractCovariatesWorkflow {
             log.info("extract_covariates skipped: extract_claims_enabled=false");
             return List.of();
         }
-
         if (CollectionUtil.isEmpty(textUnits)) throw new IllegalStateException("textUnits 不能为空");
         if (StrUtil.isBlank(claimDescription)) throw new IllegalStateException("claimDescription 不能为空");
 
         // Python：entity_types is None -> DEFAULT_ENTITY_TYPES
-        List<String> specs = (entityTypesOrNames == null || entityTypesOrNames.isEmpty())
-                ? ExtractClaimsExtractor.DEFAULT_ENTITY_TYPES_ZH
-                : entityTypesOrNames;
+        List<String> specs = CollectionUtil.isEmpty(entityTypesOrNames) ? ExtractClaimsExtractor.DEFAULT_ENTITY_TYPES_ZH : entityTypesOrNames;
 
-        return op.extractCovariates(
-                textUnits,
-                "claim",
-                specs,
-                claimDescription,
-                extractionPrompt,
-                maxGleanings,
-                tupleDelimiter,
-                recordDelimiter,
-                completionDelimiter
-        );
+        // 直接贴合 Python 的 strategy_config 字段与默认 delimiter
+        ExtractClaimsStrategy strategy = ExtractClaimsStrategy.builder()
+                .enabled(true)
+                .claimDescription(claimDescription)
+                .maxGleanings(maxGleanings)
+                .tupleDelimiter(tupleDelimiter)
+                .recordDelimiter(recordDelimiter)
+                .completionDelimiter(completionDelimiter)
+                .extractionPrompt(extractionPrompt)
+                .build();
+
+        return op.extractCovariates(textUnits, "claim", specs, strategy);
     }
 }

@@ -1,5 +1,6 @@
 package com.gdin.inspection.graphrag.v2.index.run;
 
+import com.gdin.inspection.graphrag.config.properties.GraphProperties;
 import com.gdin.inspection.graphrag.v2.index.pipeline.Pipeline;
 import com.gdin.inspection.graphrag.v2.index.pipeline.PipelineFactory;
 import com.gdin.inspection.graphrag.v2.index.pipeline.context.PipelineRunContext;
@@ -11,40 +12,44 @@ import java.util.List;
 
 @Service
 public class GraphRagIndexRunner {
+    @Resource
+    private GraphProperties graphProperties;
 
     @Resource
     private PipelineFactory<Object> factory;
 
-    public List<?> runStandard(GraphRagIndexRunRequest req) {
+    public List<?> runStandard(List<String> documentIds) {
         PipelineRunContext ctx = new PipelineRunContext();
 
-        // === 按你 DefaultPipelineRegistrar 里 ctx.get(...) 读取的 key 填 ===
-        ctx.put("document_ids", req.documentIds());
-        ctx.put("entity_types", req.entityTypes());
-        ctx.put("entity_summary_max_words", req.entitySummaryMaxWords());
-        ctx.put("relationship_summary_max_words", req.relationshipSummaryMaxWords());
-
-        ctx.put("max_cluster_size", req.maxClusterSize());
-        ctx.put("use_lcc", req.useLcc());
-        ctx.put("cluster_seed", req.clusterSeed());
-
-        ctx.put("max_report_length", req.maxReportLength());
-
-        // covariates 目前你还没抽取，就让它缺省为 null（create_final_text_units 会处理）
-        ctx.put("covariates", null);
+        GraphProperties.Index.Standard standard = graphProperties.getIndex().getStandard();
+        // ==============load_input_documents==============
+        ctx.put("document_ids", documentIds);
+        // ==============extract_graph==============
+        ctx.put("max_gleanings", standard.getMaxGleanings());
+        ctx.put("tuple_delimiter", standard.getTupleDelimiter());
+        ctx.put("record_delimiter", standard.getRecordDelimiter());
+        ctx.put("completion_delimiter", standard.getCompletionDelimiter());
+        if(standard.getExtractionPrompt()!=null) ctx.put("extraction_prompt", standard.getExtractionPrompt());
+        ctx.put("entity_types", standard.getEntityTypes());
+        ctx.put("entity_summary_max_words", standard.getEntitySummaryMaxWords());
+        ctx.put("relationship_summary_max_words", standard.getRelationshipSummaryMaxWords());
+        // ==============extract_covariates==============
+        ctx.put("claims_enabled", standard.getClaimsEnabled());
+        ctx.put("claims_description", standard.getClaimsDescription());
+        ctx.put("claims_max_gleanings", standard.getClaimsMaxGleanings());
+        ctx.put("claims_tuple_delimiter", standard.getClaimsTupleDelimiter());
+        ctx.put("claims_record_delimiter", standard.getClaimsRecordDelimiter());
+        ctx.put("claims_completion_delimiter", standard.getClaimsCompletionDelimiter());
+        ctx.put("claims_entity_types", standard.getClaimsEntityTypes());
+        if(standard.getClaimsExtractionPrompt()!=null) ctx.put("claims_extraction_prompt", standard.getClaimsExtractionPrompt());
+        // ==============extract_covariates==============
+        ctx.put("max_cluster_size", standard.getMaxClusterSize());
+        ctx.put("use_lcc", standard.getUseLcc());
+        ctx.put("cluster_seed", standard.getClusterSeed());
+        // ==============create_community_reports==============
+        ctx.put("max_report_length", standard.getMaxReportLength());
 
         Pipeline<Object> pipeline = factory.createPipeline("standard");
         return new RunPipeline<>().run(pipeline, null, ctx);
     }
-
-    public record GraphRagIndexRunRequest(
-            List<String> documentIds,
-            String entityTypes,
-            Integer entitySummaryMaxWords,
-            Integer relationshipSummaryMaxWords,
-            Integer maxClusterSize,
-            Boolean useLcc,
-            Integer clusterSeed,
-            Integer maxReportLength
-    ) {}
 }

@@ -2,88 +2,149 @@ package com.gdin.inspection.graphrag.v2.index.prompts;
 
 /**
  * 对齐 Python 版 COMMUNITY_REPORT_PROMPT 的中文版本。
- *
- * 这里的设计和 Python 略有区别：
- * - Python 把 {input_text} 和 {max_report_length} 都塞在一个大 prompt 字符串里；
- * - Java 这边把“规范说明”放在 system prompt，把“具体社区上下文”放在 user prompt。
- *
- * 本质上逻辑等价：system 描述任务和输出格式，user 提供具体社区数据。
  */
 public final class CommunityReportPromptsZh {
-
-    /**
-     * 构造用于社区报告生成的 system prompt。
-     *
-     * @param maxReportLength 报告最大长度（按“词”计数，对中文可以理解为近似字数上限）
-     */
-    public static String buildSystemPrompt(int maxReportLength) {
-        return """
-你是一名帮助人类分析师进行一般信息发现（information discovery）的智能助手。信息发现是指在一个由实体（例如组织、个人）构成的网络中，识别和评估与这些实体相关的重要信息。
+    public static final String COMMUNITY_REPORT_PROMPT = """
+你是一名 AI 助手，帮助人工分析员进行通用的信息发现工作。信息发现是指在一个网络中，识别并评估与某些实体（例如组织与个人）相关的有用信息的过程。
 
 # 目标
-
-给定某个社区相关的结构化数据（例如社区内的实体、实体之间的关系，以及可选的声明 / 线索信息），你需要为这个社区撰写一份结构化的中文分析报告。该报告将用于为决策者提供参考，内容应涵盖：
-- 社区中的关键实体及其角色
-- 这些实体之间的关联关系
-- 与合规性、技术能力、声誉、风险事件等相关的重要信息
+在给定一个社区中包含的实体列表、这些实体之间的关系，以及可选的相关指控或主张的情况下，撰写一份关于该社区的综合报告。该报告将用于向决策者提供与该社区相关的信息及其潜在影响。报告内容包括社区关键实体概览、其合规情况、技术能力、声誉，以及值得关注的指控或主张。
 
 # 报告结构
 
-最终你要输出一个 JSON 对象，内部字段含义如下：
+报告应包含以下部分：
 
-- title: 报告标题。应能概括社区的核心主题、关键实体或领域，尽量简短但具体，适当包含代表性实体名称。
-- summary: 一段对整个社区的执行摘要，概括社区的整体结构、主要参与方、关键活动或问题。
-- rating: 一个 0 到 10 的浮点数，代表该社区总体的“影响严重程度（IMPACT SEVERITY）”。IMPACT 可以理解为该社区的重要性 / 风险 / 关注度的综合评分。
-- rating_explanation: 对 rating 的简要解释，说明你是如何根据社区中的证据得出这个评分的（用 1~2 句话说明即可）。
-- findings: 一个数组，代表该社区的详细发现列表。**建议包含 5~10 条**。每个元素应包含：
-  - summary: 对该发现的简要标题或高度概括（1~2 句）。
-  - explanation: 对该发现的详细说明，包含背景、推理过程以及支持它的证据引用，尽量写成多段落的说明文本。
+- TITLE：能够代表该社区关键实体的社区名称。标题应简短但具体。在可能的情况下，在标题中包含具有代表性的命名实体。
+- SUMMARY：社区整体结构的高层概述，说明社区内实体之间如何相互关联，以及与这些实体相关的重要信息。
+- IMPACT SEVERITY RATING：0-10 之间的浮点评分，用于表示该社区内实体造成的影响严重程度。IMPACT 表示对一个社区重要性的评分。
+- RATING EXPLANATION：用一句话解释该 IMPACT 严重程度评分的原因。
+- DETAILED FINDINGS：列出 5-10 条关于该社区的关键洞察。每条洞察应包含一个简短摘要，并给出多段详细解释文字；解释必须按下方“证据对齐规则”进行引用支撑，且内容要全面。
 
-# 证据与引用
+请将输出以一个格式正确的 JSON 字符串返回，格式如下：
+    {{
+        "title": <report_title>,
+        "summary": <executive_summary>,
+        "rating": <impact_severity_rating>,
+        "rating_explanation": <rating_explanation>,
+        "findings": [
+            {{
+                "summary": <insight_1_summary>,
+                "explanation": <insight_1_explanation>
+            }},
+            {{
+                "summary": <insight_2_summary>,
+                "explanation": <insight_2_explanation>
+            }}
+        ]
+    }}
 
-你会在后续 user 的消息中收到社区的上下文数据，通常为 CSV 或类 CSV 形式，其中每一行代表一条记录，并包含唯一的 id（如 id 或 short_id）用于标识该记录。你在 explanation 中引用证据时，应遵循以下规范：
+# 证据对齐规则
 
-- 需要尽量指明具体来自哪些记录，推荐格式类似：
-  “实体 A 与实体 B 之间存在多次资金往来，并在同一项目中出现 [Data: Entities (5, 7); Relationships (23)].”
-- 单次引用中，**不要列出超过 5 个 record id**。如果相关记录很多，只列出最相关的前 5 个，并在末尾加上 “+more”，例如：
-  “Person X 是 Company Y 的所有者，且存在多起违规指控 [Data: Reports (1); Entities (5, 7); Relationships (23); Claims (7, 2, 34, 64, 46, +more)].”
-- 这里的数字（例如 1, 5, 7, 23, 2, 34, 46, 64）始终表示数据记录的 id（而不是索引）。
+由数据支撑的观点需要按如下格式列出其数据引用：
 
-**非常重要：**
-- 不要虚构上下文中不存在的记录或 id，只能引用给定数据中真实存在的记录。
-- 不要编造上下文中没有出现的事实。
-- 不要在报告中包含没有任何证据支撑的信息。
+“这是一句由多条数据引用支撑的示例句子 [Data: <数据集名称> (记录 id 列表); <数据集名称> (记录 id 列表)].”
 
-# 长度控制
+单个引用中不要列出超过 5 个记录 id。应当列出最相关的前 5 个记录 id，并追加 “+more” 表示还有更多。
 
-整份报告的总字数（可以粗略理解为“等价词数”）不应超过 %d。
-在保证信息密度和可读性的前提下，尽量言简意赅。
+例如：
+“人物 X 是公司 Y 的所有者，并受到多项不当行为指控 [Data: Reports (1), Entities (5, 7); Relationships (23); Claims (7, 2, 34, 64, 46, +more)].”
 
-# 输出要求
+其中 1、5、7、23、2、34、46 与 64 表示相关数据记录的 id（不是索引位置）。
 
-1. 最终只输出一个 JSON 对象，不要输出任何额外文字、Markdown 标题或解释性说明。
-2. JSON 字段必须包括：title, summary, findings, rating, rating_explanation。
-3. findings 必须是数组，每个元素包含 summary 和 explanation 两个字段。
-4. JSON 中不要包含注释，不要添加多余字段。
-""".formatted(maxReportLength);
-    }
+不要包含任何缺少证据支撑的信息。
 
-    /**
-     * 构造 user prompt，把具体的社区上下文传给模型。
-     *
-     * @param communityContext 预先构造好的社区上下文字符串（通常是 CSV）
-     */
-    public static String buildUserPrompt(String communityContext) {
-        return """
-下面是某个社区的结构化上下文数据。每一行代表一条与该社区相关的记录，可能来自实体表、关系表、声明表或已有的社区报告等。
+将整份报告的总长度限制为 {max_report_length} 个词。
 
-请你仔细阅读这些数据，并根据 system 提示中的要求，生成该社区的分析报告 JSON。
+# 输入示例
+-----------
+Text:
 
-【社区上下文开始】
-%s
-【社区上下文结束】
-""".formatted(communityContext == null ? "" : communityContext);
-    }
+实体（Entities）
 
-    private CommunityReportPromptsZh() {}
+id,entity,description
+5,VERDANT OASIS PLAZA,Verdant Oasis Plaza 是 Unity March 的举办地点
+6,HARMONY ASSEMBLY,Harmony Assembly 是一个组织，正在 Verdant Oasis Plaza 举办一次游行活动
+
+关系（Relationships）
+
+id,source,target,description
+37,VERDANT OASIS PLAZA,UNITY MARCH,Verdant Oasis Plaza 是 Unity March 的举办地点
+38,VERDANT OASIS PLAZA,HARMONY ASSEMBLY,Harmony Assembly 在 Verdant Oasis Plaza 举办游行
+39,VERDANT OASIS PLAZA,UNITY MARCH,Unity March 正在 Verdant Oasis Plaza 举行
+40,VERDANT OASIS PLAZA,TRIBUNE SPOTLIGHT,Tribune Spotlight 正在报道发生在 Verdant Oasis Plaza 的 Unity March
+41,VERDANT OASIS PLAZA,BAILEY ASADI,Bailey Asadi 在 Verdant Oasis Plaza 就游行活动发表讲话
+43,HARMONY ASSEMBLY,UNITY MARCH,Harmony Assembly 正在组织 Unity March
+
+Output:
+{{
+    "title": "Verdant Oasis Plaza 与 Unity March",
+    "summary": "该社区围绕 Verdant Oasis Plaza 展开，该地点是 Unity March 的举办地。广场与 Harmony Assembly、Unity March、Tribune Spotlight 以及 Bailey Asadi 等实体存在直接关联，这些关联共同指向同一场游行事件及其组织与传播链路。",
+    "rating": 5.0,
+    "rating_explanation": "该社区的影响严重程度为中等，因为与游行活动相关的聚集与传播可能带来一定的不确定性与风险外溢。",
+    "findings": [
+        {{
+            "summary": "Verdant Oasis Plaza 是社区的核心枢纽",
+            "explanation": "Verdant Oasis Plaza 是该社区的中心实体，作为 Unity March 的举办地点，它与多条关系记录相连，构成了社区网络的主要汇聚点。该地点作为事件载体，使组织方、事件本身、媒体与发言人都围绕其形成关联，因此它对理解社区结构与潜在影响具有关键意义。 [Data: Entities (5), Relationships (37, 38, 39, 40, 41, +more)]"
+        }},
+        {{
+            "summary": "Harmony Assembly 是事件的组织核心之一",
+            "explanation": "Harmony Assembly 在数据中被明确描述为在 Verdant Oasis Plaza 举办游行并组织 Unity March 的组织实体。其与地点及事件之间的关系，为识别该社区的组织结构提供了主线，也有助于评估事件的动员与组织能力。 [Data: Entities (6), Relationships (38, 43)]"
+        }},
+        {{
+            "summary": "Unity March 是社区关系聚焦的关键事件",
+            "explanation": "Unity March 在多条关系中与 Verdant Oasis Plaza 直接绑定，显示该事件是社区网络中的关键“共同指向点”。事件的存在把地点、组织与报道方串联起来，是理解社区动态与影响路径的重要切入点。 [Data: Relationships (37, 39, +more)]"
+        }},
+        {{
+            "summary": "媒体与发言人节点提示了传播与舆论维度",
+            "explanation": "Tribune Spotlight 的报道关系表明该事件获得媒体关注，可能扩大其影响范围；Bailey Asadi 在现场发言则提示存在“人物-地点-事件”的表达或动员链路。这些节点往往会影响外部认知与事件外溢效应的大小。 [Data: Relationships (40, 41)]"
+        }}
+    ]
+}}
+
+# 真实数据
+
+请使用以下文本生成你的回答。不要在回答中编造任何信息。
+
+Text:
+{input_text}
+
+报告应包含以下部分：
+
+- TITLE：能够代表该社区关键实体的社区名称。标题应简短但具体。在可能的情况下，在标题中包含具有代表性的命名实体。
+- SUMMARY：社区整体结构的高层概述，说明社区内实体之间如何相互关联，以及与这些实体相关的重要信息。
+- IMPACT SEVERITY RATING：0-10 之间的浮点评分，用于表示该社区内实体造成的影响严重程度。IMPACT 表示对一个社区重要性的评分。
+- RATING EXPLANATION：用一句话解释该 IMPACT 严重程度评分的原因。
+- DETAILED FINDINGS：列出 5-10 条关于该社区的关键洞察。每条洞察应包含一个简短摘要，并给出多段详细解释文字；解释必须按下方“证据对齐规则”进行引用支撑，且内容要全面。
+
+请将输出以一个格式正确的 JSON 字符串返回，格式如下：
+    {{
+        "title": <report_title>,
+        "summary": <executive_summary>,
+        "rating": <impact_severity_rating>,
+        "rating_explanation": <rating_explanation>,
+        "findings": [
+            {{
+                "summary": <insight_1_summary>,
+                "explanation": <insight_1_explanation>
+            }},
+            {{
+                "summary": <insight_2_summary>,
+                "explanation": <insight_2_explanation>
+            }}
+        ]
+    }}
+
+# 证据对齐规则
+
+由数据支撑的观点需要按如下格式列出其数据引用：
+
+“这是一句由多条数据引用支撑的示例句子 [Data: <数据集名称> (记录 id 列表); <数据集名称> (记录 id 列表)].”
+
+单个引用中不要列出超过 5 个记录 id。应当列出最相关的前 5 个记录 id，并追加 “+more” 表示还有更多。
+
+不要包含任何缺少证据支撑的信息。
+
+将整份报告的总长度限制为 {max_report_length} 个词。
+
+Output:""";
 }

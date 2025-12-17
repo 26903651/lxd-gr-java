@@ -49,4 +49,7 @@ public class Covariate {
 
     @JsonProperty("text_unit_id")
     String textUnitId;
+
+    @JsonProperty("record_id")
+    String recordId;
 }

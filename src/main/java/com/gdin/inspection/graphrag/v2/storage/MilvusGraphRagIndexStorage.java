@@ -86,16 +86,16 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
         }
 
         try {
-            milvusUtil.insertByBatch(graphProperties.getEntityCollectionName(), rows);
+            milvusUtil.insertByBatch(graphProperties.getCollectionNames().getEntityCollectionName(), rows);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        log.info("saveEntities: 已写入 {} 条实体到 {}", rows.size(), graphProperties.getEntityCollectionName());
+        log.info("saveEntities: 已写入 {} 条实体到 {}", rows.size(), graphProperties.getCollectionNames().getEntityCollectionName());
     }
 
     @Override
     public List<Entity> loadEntities() {
-        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getEntityCollectionName(), List.of("id", "human_readable_id", "title", "type", "description", "text_unit_ids", "frequency", "degree", "x", "y"));
+        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getCollectionNames().getEntityCollectionName(), List.of("id", "human_readable_id", "title", "type", "description", "text_unit_ids", "frequency", "degree", "x", "y"));
         try {
             List<Entity> entities = rowRecordsToModels(rowRecords, Entity.class);
             entities.sort(Comparator.comparingInt(t -> t.getHumanReadableId() == null ? -1 : t.getHumanReadableId()));
@@ -131,16 +131,16 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
         }
 
         try {
-            milvusUtil.insertByBatch(graphProperties.getRelationshipCollectionName(), rows);
+            milvusUtil.insertByBatch(graphProperties.getCollectionNames().getRelationshipCollectionName(), rows);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        log.info("saveRelationships: 已写入 {} 条关系到 {}", rows.size(), graphProperties.getRelationshipCollectionName());
+        log.info("saveRelationships: 已写入 {} 条关系到 {}", rows.size(), graphProperties.getCollectionNames().getRelationshipCollectionName());
     }
 
     @Override
     public List<Relationship> loadRelationships() {
-        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getRelationshipCollectionName(), List.of("id", "human_readable_id", "source", "target", "description", "weight", "combined_degree", "text_unit_ids"));
+        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getCollectionNames().getRelationshipCollectionName(), List.of("id", "human_readable_id", "source", "target", "description", "weight", "combined_degree", "text_unit_ids"));
         try {
             List<Relationship> relationships = rowRecordsToModels(rowRecords, Relationship.class);
             relationships.sort(Comparator.comparingInt(t -> t.getHumanReadableId() == null ? -1 : t.getHumanReadableId()));
@@ -155,7 +155,7 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
         try {
             List<TextUnit> textUnits = new ArrayList<>();
             String filter = "extra[\"graph\"] == \"1\"";
-            List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getContentCollectionName(), List.of("metadata", "page_content", "graph_main", "graph_document_ids", "graph_entity_ids", "graph_relationship_ids", "graph_covariate_ids"), filter);
+            List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getCollectionNames().getContentCollectionName(), List.of("metadata", "page_content", "graph_main", "graph_document_ids", "graph_entity_ids", "graph_relationship_ids", "graph_covariate_ids"), filter);
             for (QueryResultsWrapper.RowRecord rowRecord : rowRecords) {
                 Map<String, Object> fieldValues = rowRecord.getFieldValues();
                 String pageContent = (String) fieldValues.get("page_content");
@@ -217,21 +217,22 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
             addStringList(obj, "text_unit_ids", c.getTextUnitIds());
             safeAddString(obj, "period", c.getPeriod());
             safeAddInt(obj, "size", c.getSize());
+            safeAddEmbedding(obj, "embedding", c.getTitle());
 
             rows.add(obj);
         }
 
         try {
-            milvusUtil.insertByBatch(graphProperties.getCommunityCollectionName(), rows);
+            milvusUtil.insertByBatch(graphProperties.getCollectionNames().getCommunityCollectionName(), rows);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        log.info("saveCommunities: 已写入 {} 条社区到 {}", rows.size(), graphProperties.getCommunityCollectionName());
+        log.info("saveCommunities: 已写入 {} 条社区到 {}", rows.size(), graphProperties.getCollectionNames().getCommunityCollectionName());
     }
 
     @Override
     public List<Community> loadCommunities() {
-        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getCommunityCollectionName(), List.of("id", "human_readable_id", "community", "level", "parent", "children", "title", "entity_ids", "relationship_ids", "text_unit_ids", "period", "size"));
+        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getCollectionNames().getCommunityCollectionName(), List.of("id", "human_readable_id", "community", "level", "parent", "children", "title", "entity_ids", "relationship_ids", "text_unit_ids", "period", "size"));
         try {
             List<Community> communities = rowRecordsToModels(rowRecords, Community.class);
             communities.sort(Comparator.comparingInt(t -> t.getHumanReadableId() == null ? -1 : t.getHumanReadableId()));
@@ -275,16 +276,16 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
         }
 
         try {
-            milvusUtil.insertByBatch(graphProperties.getCommunityReportCollectionName(), rows);
+            milvusUtil.insertByBatch(graphProperties.getCollectionNames().getCommunityReportCollectionName(), rows);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        log.info("saveCommunityReports: 已写入 {} 条社区报告到 {}", rows.size(), graphProperties.getCommunityReportCollectionName());
+        log.info("saveCommunityReports: 已写入 {} 条社区报告到 {}", rows.size(), graphProperties.getCollectionNames().getCommunityReportCollectionName());
     }
 
     @Override
     public List<CommunityReport> loadCommunityReports() {
-        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getCommunityReportCollectionName(), List.of("id", "human_readable_id", "community", "level", "parent", "children", "title", "summary", "full_content", "rank", "rating_explanation", "findings", "full_content_json", "period", "size"));
+        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getCollectionNames().getCommunityReportCollectionName(), List.of("id", "human_readable_id", "community", "level", "parent", "children", "title", "summary", "full_content", "rank", "rating_explanation", "findings", "full_content_json", "period", "size"));
         try {
             List<CommunityReport> communityReports = rowRecordsToModels(rowRecords, CommunityReport.class);
             communityReports.sort(Comparator.comparingInt(t -> t.getHumanReadableId() == null ? -1 : t.getHumanReadableId()));
@@ -317,6 +318,7 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
             safeAddInstantAsString(obj, "end_date", c.getEndDate());
             safeAddString(obj, "source_text", c.getSourceText());
             safeAddString(obj, "text_unit_id", c.getTextUnitId());
+            safeAddString(obj, "record_id", c.getRecordId());
 
             // 向量：description 优先，其次 source_text
             String embedText = !StrUtil.isBlank(c.getDescription()) ? c.getDescription() : c.getSourceText();
@@ -326,16 +328,16 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
         }
 
         try {
-            milvusUtil.insertByBatch(graphProperties.getCovariateCollectionName(), rows);
+            milvusUtil.insertByBatch(graphProperties.getCollectionNames().getCovariateCollectionName(), rows);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        log.info("saveCovariates: 已写入 {} 条到 {}", rows.size(), graphProperties.getCovariateCollectionName());
+        log.info("saveCovariates: 已写入 {} 条到 {}", rows.size(), graphProperties.getCollectionNames().getCovariateCollectionName());
     }
 
     @Override
     public List<Covariate> loadCovariates() {
-        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getCovariateCollectionName(), List.of("id", "human_readable_id", "covariate_type", "type", "description", "subject_id", "object_id", "status", "start_date", "end_date", "source_text", "text_unit_id"));
+        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getCollectionNames().getCovariateCollectionName(), List.of("id", "human_readable_id", "covariate_type", "type", "description", "subject_id", "object_id", "status", "start_date", "end_date", "source_text", "text_unit_id", "record_id"));
         try {
             List<Covariate> covariates = rowRecordsToModels(rowRecords, Covariate.class);
             covariates.sort(Comparator.comparingInt(t -> t.getHumanReadableId() == null ? -1 : t.getHumanReadableId()));

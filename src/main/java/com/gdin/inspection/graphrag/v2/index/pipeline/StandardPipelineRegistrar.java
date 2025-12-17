@@ -1,5 +1,6 @@
 package com.gdin.inspection.graphrag.v2.index.pipeline;
 
+import com.gdin.inspection.graphrag.config.properties.GraphProperties;
 import com.gdin.inspection.graphrag.v2.index.workflows.*;
 import com.gdin.inspection.graphrag.v2.models.*;
 import jakarta.annotation.PostConstruct;
@@ -10,7 +11,6 @@ import java.util.List;
 
 @Component
 public class StandardPipelineRegistrar {
-
     @Resource
     private LoadInputDocumentsWorkflow loadInputDocumentsWorkflow;
     @Resource
@@ -45,6 +45,11 @@ public class StandardPipelineRegistrar {
         factory.register("extract_graph", (cfg, ctx) -> {
             ExtractGraphWorkflow.Result out = extractGraphWorkflow.run(
                     ctx.get("text_units"),
+                    ctx.get("max_gleanings"),
+                    ctx.get("tuple_delimiter"),
+                    ctx.get("record_delimiter"),
+                    ctx.get("completion_delimiter"),
+                    ctx.get("extraction_prompt"),
                     ctx.get("entity_types"),
                     ctx.get("entity_summary_max_words"),
                     ctx.get("relationship_summary_max_words")
@@ -58,38 +63,16 @@ public class StandardPipelineRegistrar {
 
         // 3) extract_covariates —— 对齐 Python: workflows/extract_covariates.py
         factory.register("extract_covariates", (cfg, ctx) -> {
-            // enabled：对齐 Python config.extract_claims.enabled
-            Boolean extractClaimsEnabled = ctx.get("extract_claims_enabled");
-            if (extractClaimsEnabled == null) extractClaimsEnabled = Boolean.FALSE;
-            // claim_description：对齐 strategy_config["claim_description"]
-            String claimDescription = ctx.get("extract_claims_claim_description");
-            if (claimDescription == null) claimDescription = ctx.get("claim_description");
-            // max_gleanings / delimiters：对齐 strategy_config
-            Integer maxGleanings = ctx.get("extract_claims_max_gleanings");
-            if (maxGleanings == null) maxGleanings = ctx.get("max_gleanings");
-            String tupleDelimiter = ctx.get("extract_claims_tuple_delimiter");
-            if (tupleDelimiter == null) tupleDelimiter = ctx.get("tuple_delimiter");
-            String recordDelimiter = ctx.get("extract_claims_record_delimiter");
-            if (recordDelimiter == null) recordDelimiter = ctx.get("record_delimiter");
-            String completionDelimiter = ctx.get("extract_claims_completion_delimiter");
-            if (completionDelimiter == null) completionDelimiter = ctx.get("completion_delimiter");
-            // entity_types：Python 允许 None -> DEFAULT_ENTITY_TYPES，这里也允许不传
-            List<String> entityTypesOrNames = ctx.get("extract_claims_entity_types");
-            if (entityTypesOrNames == null) entityTypesOrNames = ctx.get("entity_types"); // 如果你没单独放，就回退复用
-            // extraction_prompt：Python strategy 可覆盖（你 Java 侧目前还没做 resolved_strategy，这里先透传）
-            String extractionPrompt = ctx.get("extract_claims_extraction_prompt");
-            if (extractionPrompt == null) extractionPrompt = ctx.get("extraction_prompt");
-
             List<Covariate> covariates = extractCovariatesWorkflow.run(
-                    extractClaimsEnabled,
+                    ctx.get("claims_enabled"),
                     ctx.get("text_units"),
-                    claimDescription,
-                    maxGleanings,
-                    tupleDelimiter,
-                    recordDelimiter,
-                    completionDelimiter,
-                    entityTypesOrNames,
-                    extractionPrompt
+                    ctx.get("claims_description"),
+                    ctx.get("claims_max_gleanings"),
+                    ctx.get("claims_tuple_delimiter"),
+                    ctx.get("claims_record_delimiter"),
+                    ctx.get("claims_completion_delimiter"),
+                    ctx.get("claims_entity_types"),
+                    ctx.get("claims_extraction_prompt")
             );
 
             ctx.put("covariates", covariates);

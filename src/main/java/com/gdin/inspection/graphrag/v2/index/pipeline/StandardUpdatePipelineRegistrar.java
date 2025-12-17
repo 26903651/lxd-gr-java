@@ -66,17 +66,21 @@ public class StandardUpdatePipelineRegistrar {
 
         // 3) update_extract_graph
         factory.register("update_extract_graph", (cfg, ctx) -> {
-            ExtractGraphWorkflow.Result result = extractGraphWorkflow.run(
-                    ctx.get("delta_text_units"),
+            ExtractGraphWorkflow.Result out = extractGraphWorkflow.run(
+                    ctx.get("text_units"),
+                    ctx.get("max_gleanings"),
+                    ctx.get("tuple_delimiter"),
+                    ctx.get("record_delimiter"),
+                    ctx.get("completion_delimiter"),
+                    ctx.get("extraction_prompt"),
                     ctx.get("entity_types"),
                     ctx.get("entity_summary_max_words"),
                     ctx.get("relationship_summary_max_words")
             );
-
-            ctx.put("delta_entities", result.getEntities());
-            ctx.put("delta_relationships", result.getRelationships());
-            ctx.put("delta_raw_entities", result.getRawEntities());
-            ctx.put("delta_raw_relationships", result.getRawRelationships());
+            ctx.put("entities", out.getEntities());
+            ctx.put("relationships", out.getRelationships());
+            ctx.put("raw_entities", out.getRawEntities());
+            ctx.put("raw_relationships", out.getRawRelationships());
             return WorkflowFunctionOutput.builder().result("update_extract_graph_done").build();
         });
 
@@ -122,11 +126,11 @@ public class StandardUpdatePipelineRegistrar {
             List<Community> oldCommunities = ctx.get("old_communities");
             List<Community> deltaCommunities = ctx.get("communities");
 
-            CommunityUpdateUtils.CommunitiesMergeResult merge = updateCommunitiesWorkflow.run(oldCommunities, deltaCommunities);
+            UpdateCommunitiesWorkflow.Result result = updateCommunitiesWorkflow.run(oldCommunities, deltaCommunities);
 
             // 用 merged 覆盖回主键名（后续 persist_index 用）
-            ctx.put("communities", merge.getMergedCommunities());
-            ctx.put("community_id_mapping", merge.getCommunityIdMapping());
+            ctx.put("communities", result.getMergedCommunities());
+            ctx.put("community_id_mapping", result.getCommunityIdMapping());
 
             return WorkflowFunctionOutput.builder().result("update_communities_done").build();
         });
@@ -151,7 +155,7 @@ public class StandardUpdatePipelineRegistrar {
 
         // 9) update_clean_state
         factory.register("update_clean_state", (cfg, ctx) -> {
-            updateCleanStateWorkflow.run();
+            updateCleanStateWorkflow.run(ctx);
             return WorkflowFunctionOutput.builder().result("update_clean_state_done").build();
         });
 
