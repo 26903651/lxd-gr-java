@@ -20,8 +20,7 @@ public class IndexTest {
 
     @Test
     void testStandard() throws Exception {
-        List<?> objects = graphRagIndexRunner.runStandard(List.of("9c3c1d6b-fd37-42b9-8b33-132da0beb6cd"), "standard-test");
-        // List<?> objects = graphRagIndexRunner.runStandard(List.of("9c3c1d6b-fd37-42b9-8b33-132da0beb6cd"));
-        log.info("objects: {}", objects);
+        graphRagIndexRunner.runStandard(List.of("9c3c1d6b-fd37-42b9-8b33-132da0beb6cd"), "standard-test");
+        // graphRagIndexRunner.runStandard(List.of("9c3c1d6b-fd37-42b9-8b33-132da0beb6cd"));
     }
 }

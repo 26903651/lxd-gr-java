@@ -1,7 +1,7 @@
 package com.gdin.inspection.graphrag.v2.index.prompts;
 
 /**
- * 对齐 Python 版 COMMUNITY_REPORT_PROMPT 的中文版本。
+ * 对齐 Python 版 COMMUNITY_REPORT_PROMPT 的中文版本，并增加“JSON 字符串内容禁用英文双引号”的统一规则。
  */
 public final class CommunityReportPromptsZh {
     public static final String COMMUNITY_REPORT_PROMPT = """
@@ -9,6 +9,12 @@ public final class CommunityReportPromptsZh {
 
 # 目标
 在给定一个社区中包含的实体列表、这些实体之间的关系，以及可选的相关指控或主张的情况下，撰写一份关于该社区的综合报告。该报告将用于向决策者提供与该社区相关的信息及其潜在影响。报告内容包括社区关键实体概览、其合规情况、技术能力、声誉，以及值得关注的指控或主张。
+
+# 输出引号规则
+你必须严格遵守以下规则以确保输出可被 JSON 解析器解析：
+1. 你的最终输出必须是一个标准 JSON 对象字符串，可被 JSON 解析器直接解析。
+2. 任何 JSON 字符串“内容内部”严禁出现英文半角双引号 "。凡是需要引用或强调的内容，一律使用中文双引号 “ ”。
+3. 如果输入文本、证据引用或摘要中包含英文半角双引号 "，你必须在输出时将其替换为中文双引号 “ ”，以避免破坏 JSON 结构。
 
 # 报告结构
 

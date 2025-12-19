@@ -46,7 +46,7 @@ public class GraphProperties implements Serializable {
             // 覆盖抽取提示词（最好别乱动）
             private String extractionPrompt;
             // 实体类型
-            private List<String> entityTypes = List.of("组织", "人员", "地理位置", "事件", "时间");
+            private List<String> entityTypes = List.of("组织", "人员", "地理位置", "事件");
             // 摘要长度控制
             private Integer entitySummaryMaxWords = 500;
             private Integer relationshipSummaryMaxWords = 500;
@@ -63,13 +63,13 @@ public class GraphProperties implements Serializable {
             private String claimsRecordDelimiter = "##";
             private String claimsCompletionDelimiter = "<|COMPLETE|>";
             // 实体类型
-            private List<String> claimsEntityTypes = List.of("组织", "人员", "地理位置", "事件", "时间");
+            private List<String> claimsEntityTypes = List.of("组织", "人员", "地理位置", "事件");
             // 覆盖抽取提示词（最好别乱动）
             private String claimsExtractionPrompt;
 
             // =============== create_communities ================
             // 聚类参数
-            private Integer maxClusterSize = 50;
+            private Integer maxClusterSize = 10;
             private Boolean useLcc = true;
             private Integer clusterSeed = 0xDEADBEEF & 0x7FFFFFFF;
 

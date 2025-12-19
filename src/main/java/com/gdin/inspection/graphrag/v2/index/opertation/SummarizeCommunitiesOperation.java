@@ -115,8 +115,8 @@ public class SummarizeCommunitiesOperation {
 
                         CommunityReportResponse s = r.getStructuredOutput();
 
-                        String findingsJson = IOUtil.jsonSerialize(s.getFindings());
-                        String fullContentJson = IOUtil.jsonSerialize(s, true);
+                        String findingsJson = IOUtil.jsonSerializeWithNoType(s.getFindings());
+                        String fullContentJson = IOUtil.jsonSerializeWithNoType(s, true);
 
                         return new FinalizeCommunityReportsOperation.RawReportRow(
                                 communityId,
