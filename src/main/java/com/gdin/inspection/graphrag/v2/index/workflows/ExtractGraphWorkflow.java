@@ -1,6 +1,7 @@
 package com.gdin.inspection.graphrag.v2.index.workflows;
 
 import cn.hutool.core.collection.CollectionUtil;
+import com.gdin.inspection.graphrag.v2.index.opertation.ExtractGraphOperation;
 import com.gdin.inspection.graphrag.v2.index.opertation.extract.GraphExtractor;
 import com.gdin.inspection.graphrag.v2.index.opertation.SummarizeDescriptionsOperation;
 import com.gdin.inspection.graphrag.v2.index.strategy.ExtractGraphStrategy;
@@ -11,7 +12,9 @@ import com.gdin.inspection.graphrag.v2.models.RelationshipDescriptionSummary;
 import com.gdin.inspection.graphrag.v2.models.TextUnit;
 import com.gdin.inspection.graphrag.v2.util.FinalizeUtils;
 import jakarta.annotation.Resource;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -31,7 +34,7 @@ import java.util.stream.Collectors;
 public class ExtractGraphWorkflow {
 
     @Resource
-    private GraphExtractor graphExtractor;
+    private ExtractGraphOperation extractGraphOperation;
 
     @Resource
     private SummarizeDescriptionsOperation summarizeDescriptionsOperation;
@@ -49,12 +52,14 @@ public class ExtractGraphWorkflow {
             String extractionPrompt,
             List<String> entityTypesOrNames,
             Integer entitySummaryMaxWords,
-            Integer relationshipSummaryMaxWords
+            Integer relationshipSummaryMaxWords,
+            Integer concurrentRequests
     ) {
         if (CollectionUtil.isEmpty(textUnits)) throw new IllegalStateException("textUnits 不能为空");
 
         entitySummaryMaxWords = entitySummaryMaxWords == null ? 150 : entitySummaryMaxWords;
         relationshipSummaryMaxWords = relationshipSummaryMaxWords == null ? 150 : relationshipSummaryMaxWords;
+        concurrentRequests = concurrentRequests == null ? 5 : concurrentRequests;
 
         log.info(
                 "开始抽取实体和关系：textUnits={}, entitySummaryMaxWords={}, relationshipSummaryMaxWords={}",
@@ -73,10 +78,11 @@ public class ExtractGraphWorkflow {
                 .recordDelimiter(recordDelimiter)
                 .completionDelimiter(completionDelimiter)
                 .extractionPrompt(extractionPrompt)
+                .concurrentRequests(concurrentRequests)
                 .build();
 
         // 1. 调 GraphExtractor：等价 Python extract_graph.extract_graph() 的合并结果
-        GraphExtractor.ExtractionResult extractionResult = graphExtractor.extract(textUnits, entitySpecs, strategy);
+        ExtractGraphOperation.Result extractionResult = extractGraphOperation.extractGraph(textUnits, entitySpecs, strategy);
 
         List<Entity> extractedEntities = Optional.ofNullable(extractionResult.getEntities()).orElseGet(Collections::emptyList);
         List<Relationship> extractedRelationships = Optional.ofNullable(extractionResult.getRelationships()).orElseGet(Collections::emptyList);
@@ -153,8 +159,7 @@ public class ExtractGraphWorkflow {
                 })
                 .collect(Collectors.toList());
 
-        List<Relationship> finalizedRelationships =
-                FinalizeUtils.finalizeRelationships(relationshipsWithSummary);
+        List<Relationship> finalizedRelationships = FinalizeUtils.finalizeRelationships(relationshipsWithSummary);
 
         // 7. 返回结果：等价 Python extract_graph() 返回的四个 DataFrame
         return new Result(finalizedEntities, finalizedRelationships, rawEntities, rawRelationships);
@@ -170,22 +175,12 @@ public class ExtractGraphWorkflow {
      * 对应 Python extract_graph workflow 返回的四个 DataFrame。
      */
     @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Result {
         private List<Entity> entities;
         private List<Relationship> relationships;
         private List<Entity> rawEntities;
         private List<Relationship> rawRelationships;
-
-        public Result() {}
-
-        public Result(List<Entity> entities,
-                      List<Relationship> relationships,
-                      List<Entity> rawEntities,
-                      List<Relationship> rawRelationships) {
-            this.entities = entities;
-            this.relationships = relationships;
-            this.rawEntities = rawEntities;
-            this.rawRelationships = rawRelationships;
-        }
     }
 }

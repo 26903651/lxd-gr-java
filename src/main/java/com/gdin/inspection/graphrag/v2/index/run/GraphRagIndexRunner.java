@@ -19,9 +19,14 @@ public class GraphRagIndexRunner {
     private PipelineFactory<Object> factory;
 
     public List<?> runStandard(List<String> documentIds) {
+        return runStandard(documentIds, "standard");
+    }
+
+    public List<?> runStandard(List<String> documentIds, String piplineName) {
         PipelineRunContext ctx = new PipelineRunContext();
 
         GraphProperties.Index.Standard standard = graphProperties.getIndex().getStandard();
+        ctx.put("concurrent_requests", standard.getConcurrentRequests());
         // ==============load_input_documents==============
         ctx.put("document_ids", documentIds);
         // ==============extract_graph==============
@@ -47,9 +52,10 @@ public class GraphRagIndexRunner {
         ctx.put("use_lcc", standard.getUseLcc());
         ctx.put("cluster_seed", standard.getClusterSeed());
         // ==============create_community_reports==============
+        ctx.put("max_context_tokens", standard.getMaxContextTokens());
         ctx.put("max_report_length", standard.getMaxReportLength());
 
-        Pipeline<Object> pipeline = factory.createPipeline("standard");
+        Pipeline<Object> pipeline = factory.createPipeline(piplineName);
         return new RunPipeline<>().run(pipeline, null, ctx);
     }
 }

@@ -19,14 +19,18 @@ public class LoadPreviousIndexWorkflow {
     private GraphRagIndexStorage storage;
 
     public Result run() {
+        return run(true, true, true, true, true, true);
+    }
+
+    public Result run(boolean textUnits, boolean entities, boolean relationships, boolean communities, boolean communityReports, boolean covariates) {
         log.info("开始加载旧索引");
 
-        List<TextUnit> oldTextUnits = storage.loadTextUnits();
-        List<Entity> oldEntities = storage.loadEntities();
-        List<Relationship> oldRelationships = storage.loadRelationships();
-        List<Community> oldCommunities = storage.loadCommunities();
-        List<CommunityReport> oldReports = storage.loadCommunityReports();
-        List<Covariate> oldCovariates = storage.loadCovariates();
+        List<TextUnit> oldTextUnits = textUnits ? storage.loadTextUnits() : null;
+        List<Entity> oldEntities = entities ? storage.loadEntities() : null;
+        List<Relationship> oldRelationships = relationships ? storage.loadRelationships() : null;
+        List<Community> oldCommunities = communities ? storage.loadCommunities() : null;
+        List<CommunityReport> oldReports = communityReports ? storage.loadCommunityReports() : null;
+        List<Covariate> oldCovariates = covariates ? storage.loadCovariates() : null;
 
         log.info(
                 "已加载旧索引: textUnits={}, entities={}, relationships={}, communities={}, reports={}, covariates={}",

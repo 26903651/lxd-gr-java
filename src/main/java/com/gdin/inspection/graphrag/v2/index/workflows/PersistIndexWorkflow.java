@@ -36,38 +36,37 @@ public class PersistIndexWorkflow {
             List<CommunityReport> communityReports,
             List<Covariate> covariates
     ) throws Exception {
-        if (CollectionUtil.isEmpty(textUnits)) throw new IllegalStateException("textUnits empty, refuse to deleteAll");
-        if (CollectionUtil.isEmpty(entities)) throw new IllegalStateException("entities empty, refuse to deleteAll");
-        if (CollectionUtil.isEmpty(relationships)) throw new IllegalStateException("relationships empty, refuse to deleteAll");
-        if (CollectionUtil.isEmpty(communities)) throw new IllegalStateException("communities empty, refuse to deleteAll");
-        if (CollectionUtil.isEmpty(communityReports)) throw new IllegalStateException("communityReports empty, refuse to deleteAll");
+        // if (CollectionUtil.isEmpty(textUnits)) throw new IllegalStateException("textUnits empty, refuse to deleteAll");
+        // if (CollectionUtil.isEmpty(entities)) throw new IllegalStateException("entities empty, refuse to deleteAll");
+        // if (CollectionUtil.isEmpty(relationships)) throw new IllegalStateException("relationships empty, refuse to deleteAll");
+        // if (CollectionUtil.isEmpty(communities)) throw new IllegalStateException("communities empty, refuse to deleteAll");
+        // if (CollectionUtil.isEmpty(communityReports)) throw new IllegalStateException("communityReports empty, refuse to deleteAll");
 
         log.info(
                 "保存所有实体：textUnits={}, entities={}, relationships={}, communities={}, communityReports={}, covariates={}",
-                textUnits.size(),
-                entities.size(),
-                relationships.size(),
-                communities.size(),
-                communityReports.size(),
-                CollectionUtil.isEmpty(covariates)? 0: covariates.size()
+                CollectionUtil.isEmpty(textUnits) ? 0 :textUnits.size(),
+                CollectionUtil.isEmpty(entities) ? 0 :entities.size(),
+                CollectionUtil.isEmpty(relationships) ? 0 :relationships.size(),
+                CollectionUtil.isEmpty(communities) ? 0 :communities.size(),
+                CollectionUtil.isEmpty(communityReports) ? 0 :communityReports.size(),
+                CollectionUtil.isEmpty(covariates) ? 0 :covariates.size()
         );
 
         // 先清空, 注意textUnits不能清空
-        milvusDeleteService.deleteAll(graphProperties.getCollectionNames().getCovariateCollectionName());
-        milvusDeleteService.deleteAll(graphProperties.getCollectionNames().getCommunityReportCollectionName());
-        milvusDeleteService.deleteAll(graphProperties.getCollectionNames().getCommunityCollectionName());
-        milvusDeleteService.deleteAll(graphProperties.getCollectionNames().getRelationshipCollectionName());
-        milvusDeleteService.deleteAll(graphProperties.getCollectionNames().getEntityCollectionName());
+        if(CollectionUtil.isNotEmpty(communityReports)) milvusDeleteService.deleteAll(graphProperties.getCollectionNames().getCommunityReportCollectionName());
+        if(CollectionUtil.isNotEmpty(communities)) milvusDeleteService.deleteAll(graphProperties.getCollectionNames().getCommunityCollectionName());
+        if(CollectionUtil.isNotEmpty(covariates)) milvusDeleteService.deleteAll(graphProperties.getCollectionNames().getCovariateCollectionName());
+        if(CollectionUtil.isNotEmpty(relationships)) milvusDeleteService.deleteAll(graphProperties.getCollectionNames().getRelationshipCollectionName());
+        if(CollectionUtil.isNotEmpty(entities)) milvusDeleteService.deleteAll(graphProperties.getCollectionNames().getEntityCollectionName());
 
         // 保存
-        milvusStorage.saveEntities(entities);
-        milvusStorage.saveRelationships(relationships);
-        milvusStorage.saveCommunities(communities);
-        milvusStorage.saveCommunityReports(communityReports);
-        milvusStorage.saveCovariates(covariates);
+        if(CollectionUtil.isNotEmpty(entities)) milvusStorage.saveEntities(entities);
+        if(CollectionUtil.isNotEmpty(relationships)) milvusStorage.saveRelationships(relationships);
+        if(CollectionUtil.isNotEmpty(covariates)) milvusStorage.saveCovariates(covariates);
+        if(CollectionUtil.isNotEmpty(communities)) milvusStorage.saveCommunities(communities);
+        if(CollectionUtil.isNotEmpty(communityReports)) milvusStorage.saveCommunityReports(communityReports);
 
         // 回写TextUnit到知识库
-        knowledgeSliceWriteBackService.writeBackToKnowledgeBase(textUnits);
-
+        if(CollectionUtil.isNotEmpty(textUnits)) knowledgeSliceWriteBackService.writeBackToKnowledgeBase(textUnits);
     }
 }

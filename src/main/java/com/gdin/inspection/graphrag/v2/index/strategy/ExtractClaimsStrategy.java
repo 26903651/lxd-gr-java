@@ -37,4 +37,6 @@ public class ExtractClaimsStrategy {
     /** 对齐 Python: config.extract_claims.enabled */
     @Builder.Default
     boolean enabled = true;
+
+    Integer concurrentRequests;
 }

@@ -15,7 +15,7 @@ import java.util.List;
 public class CreateFinalTextUnitsWorkflow {
 
     @Resource
-    private CreateFinalTextUnitsOperation op;
+    private CreateFinalTextUnitsOperation createFinalTextUnitsOperation;
 
     @Resource
     private KnowledgeSliceWriteBackService writeBackService;
@@ -38,7 +38,7 @@ public class CreateFinalTextUnitsWorkflow {
                 covariates==null?0:covariates.size()
         );
 
-        List<TextUnit> finalTextUnits = op.createFinalTextUnits(textUnits, entities, relationships, covariates);
+        List<TextUnit> finalTextUnits = createFinalTextUnitsOperation.createFinalTextUnits(textUnits, entities, relationships, covariates);
 
         // 写回知识库切片
         writeBackService.writeBackToKnowledgeBase(finalTextUnits);

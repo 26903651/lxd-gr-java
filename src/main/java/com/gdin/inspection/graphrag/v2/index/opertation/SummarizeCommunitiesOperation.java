@@ -1,321 +1,151 @@
 package com.gdin.inspection.graphrag.v2.index.opertation;
 
-import cn.hutool.core.util.IdUtil;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import cn.hutool.core.collection.CollectionUtil;
+import com.gdin.inspection.graphrag.util.IOUtil;
+import com.gdin.inspection.graphrag.v2.index.opertation.context.CommunityContextRow;
+import com.gdin.inspection.graphrag.v2.index.opertation.context.LevelContextBuilder;
 import com.gdin.inspection.graphrag.v2.index.opertation.extract.CommunityReportsExtractor;
-import com.gdin.inspection.graphrag.v2.models.Community;
-import com.gdin.inspection.graphrag.v2.models.CommunityReport;
-import com.gdin.inspection.graphrag.v2.models.Entity;
-import com.gdin.inspection.graphrag.v2.models.Relationship;
-import com.gdin.inspection.graphrag.v2.models.TextUnit;
-import com.gdin.inspection.graphrag.v2.storage.GraphRagIndexStorage;
-import com.gdin.inspection.graphrag.v2.util.JsonUtils;
+import com.gdin.inspection.graphrag.v2.index.strategy.CommunityReportsStrategy;
 import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.concurrent.*;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class SummarizeCommunitiesOperation {
 
     @Resource
-    private CommunityReportsExtractor communityReportsExtractor;
-
-    // 新增：Milvus 持久化
-    @Resource
-    private GraphRagIndexStorage graphRagIndexStorage;
-
-    private final ObjectMapper objectMapper = JsonUtils.mapper();
+    private CommunityReportsExtractor extractor;
 
     /**
-     * Java 版等价于 Python 的 summarize_communities(...) + finalize_community_reports(...) 的组合：
-     * - 按 level 从高到低生成社区报告（利用子社区报告作为额外上下文）；
-     * - 生成的 CommunityReport 字段对齐 COMMUNITY_REPORTS_FINAL_COLUMNS。
+     * 对齐 Python 的 derive_from_rows 并发语义：同一 level 内并发生成。
+     *
+     * strictPythonMode=true：
+     *   严格模拟 Python 当前 summarize_communities 的“bug 行为”
+     *   ——即 buildLevelContext 时 reportsSoFar 始终视为“空”，导致永远不会使用子社区 report 做替换。
+     *
+     * strictPythonMode=false：
+     *   修复版 —— 每一层都用最新 reportsSoFar 再 buildLevelContext，允许用子社区 report 替换父社区超长 context。
      */
-    public List<CommunityReport> summarizeCommunities(
-            List<Community> communities,
-            List<Entity> entities,
-            List<Relationship> relationships,
-            List<TextUnit> textUnits,
-            int maxReportLength
+    public List<FinalizeCommunityReportsOperation.RawReportRow> summarize(
+            List<CommunityContextRow> localContexts,
+            List<LevelContextBuilder.CommunityHierarchyRow> hierarchy,
+            CommunityReportsStrategy strategy
     ) {
-        if (communities == null || communities.isEmpty()) {
-            return Collections.emptyList();
-        }
 
-        // 1. 实体 / 关系 / TextUnit 索引（id -> 对象）
-        Map<String, Entity> entityMap = entities == null
-                ? Collections.emptyMap()
-                : entities.stream()
-                .filter(e -> e.getId() != null)
-                .collect(Collectors.toMap(
-                        Entity::getId,
-                        e -> e,
-                        (a, b) -> a
-                ));
+        if (CollectionUtil.isEmpty(localContexts)) return List.of();
 
-        Map<String, Relationship> relationshipMap = relationships == null
-                ? Collections.emptyMap()
-                : relationships.stream()
-                .filter(r -> r.getId() != null)
-                .collect(Collectors.toMap(
-                        Relationship::getId,
-                        r -> r,
-                        (a, b) -> a
-                ));
-
-        Map<String, TextUnit> textUnitMap = textUnits == null
-                ? Collections.emptyMap()
-                : textUnits.stream()
-                .filter(t -> t.getId() != null)
-                .collect(Collectors.toMap(
-                        TextUnit::getId,
-                        t -> t,
-                        (a, b) -> a
-                ));
-
-        // 2. 计算所有 level，按从大到小排序（Python: get_levels(..., reverse=True)）
-        List<Integer> levels = communities.stream()
-                .map(Community::getLevel)
+        // 这里用“倒序”(从大 level 到小 level)更贴近 GraphRAG 常见 bottom-up
+        // strict 模式下因为 reports 永远为空，顺序不会影响替换，但仍建议保持一致。
+        List<Integer> levels = localContexts.stream()
+                .map(CommunityContextRow::getLevel)
                 .filter(Objects::nonNull)
                 .distinct()
                 .sorted(Comparator.reverseOrder())
                 .toList();
 
-        List<CommunityReport> allReports = new ArrayList<>();
-        // 已生成的结构化报告，用于父社区上下文中引用子社区报告
-        // key = communityId
-        Map<Integer, CommunityReportsResult> structuredByCommunityId = new HashMap<>();
+        List<LevelContextBuilder.ReportRow> reportsSoFar = new ArrayList<>();
+        List<FinalizeCommunityReportsOperation.RawReportRow> rawRows = new ArrayList<>();
 
+        boolean strictPythonMode = false;   // 这里python似乎实现是有bug的, 留个开关, 控制是否严格对齐, 默认当前为修复
         for (Integer level : levels) {
-            List<Community> communitiesAtLevel = communities.stream()
-                    .filter(c -> Objects.equals(c.getLevel(), level))
-                    .toList();
+            List<LevelContextBuilder.ReportRow> reportsView =
+                    strictPythonMode ? List.of() : new ArrayList<>(reportsSoFar);
 
-            log.info("开始生成 level={} 的社区报告，社区数量={}", level, communitiesAtLevel.size());
-
-            for (Community community : communitiesAtLevel) {
-                Integer communityId = community.getCommunity();
-                if (communityId == null) continue;
-
-                // 3. 构造该社区的上下文（实体 / 关系 / 文本单元 / 子社区报告）
-                String context = buildCommunityContext(
-                        community,
-                        entityMap,
-                        relationshipMap,
-                        textUnitMap,
-                        structuredByCommunityId
-                );
-
-                // 4. 调用 LLM 生成报告（等价于 Python CommunityReportsExtractor.__call__）
-                CommunityReportsResult result = communityReportsExtractor.generateReport(context, maxReportLength);
-
-                if (result == null || result.getStructuredOutput() == null) {
-                    log.warn("社区 {} (level={}) 生成报告失败，跳过", communityId, level);
-                    continue;
-                }
-
-                // 5. 对齐 Python finalize_community_reports：human_readable_id = community
-                CommunityReport reportRow = mapToCommunityReport(
-                        community,
-                        result,
-                        level
-                );
-
-                allReports.add(reportRow);
-                structuredByCommunityId.put(communityId, result);
-            }
-        }
-
-        // === 把社区报告写入 Milvus ===
-        try {
-            graphRagIndexStorage.saveCommunityReports(allReports);
-        } catch (Exception e) {
-            log.error("保存 community_reports 到 Milvus 失败，但不影响索引流程继续", e);
-        }
-
-        return allReports;
-    }
-
-    /**
-     * 构建单个社区的上下文字符串，整体结构等价于 Python 的 level_context_builder 产出：
-     * - 实体列表 CSV
-     * - 关系列表 CSV
-     * - 文本单元列表 CSV
-     * - 子社区报告 CSV
-     */
-    private String buildCommunityContext(
-            Community community,
-            Map<String, Entity> entityMap,
-            Map<String, Relationship> relationshipMap,
-            Map<String, TextUnit> textUnitMap,
-            Map<Integer, CommunityReportsResult> structuredByCommunityId
-    ) {
-        StringBuilder sb = new StringBuilder();
-
-        // 1. 实体列表：使用 description（已经是 summary），没有 summary 字段
-        List<String> entityIds = Optional.ofNullable(community.getEntityIds()).orElse(List.of());
-        if (!entityIds.isEmpty()) {
-            sb.append("## 实体列表\n");
-            sb.append("type,id,title,entity_type,description,text_unit_ids\n");
-            for (String id : entityIds) {
-                Entity e = entityMap.get(id);
-                if (e == null) continue;
-
-                String textUnitIds = Optional.ofNullable(e.getTextUnitIds())
-                        .orElse(List.of())
-                        .stream()
-                        .collect(Collectors.joining("|"));
-
-                sb.append("entity,")
-                        .append(safeCsv(e.getId())).append(",")
-                        .append(safeCsv(e.getTitle())).append(",")
-                        .append(safeCsv(e.getType())).append(",")
-                        .append(safeCsv(e.getDescription())).append(",")
-                        .append(safeCsv(textUnitIds))
-                        .append("\n");
-            }
-            sb.append("\n");
-        }
-
-        // 2. 关系列表：只有 description，没有 predicate / summary 字段
-        List<String> relationshipIds = Optional.ofNullable(community.getRelationshipIds()).orElse(List.of());
-        if (!relationshipIds.isEmpty()) {
-            sb.append("## 关系列表\n");
-            sb.append("type,id,source,target,description,text_unit_ids\n");
-            for (String id : relationshipIds) {
-                Relationship r = relationshipMap.get(id);
-                if (r == null) continue;
-
-                String textUnitIds = Optional.ofNullable(r.getTextUnitIds())
-                        .orElse(List.of())
-                        .stream()
-                        .collect(Collectors.joining("|"));
-
-                sb.append("relationship,")
-                        .append(safeCsv(r.getId())).append(",")
-                        .append(safeCsv(r.getSource())).append(",")
-                        .append(safeCsv(r.getTarget())).append(",")
-                        .append(safeCsv(r.getDescription())).append(",")
-                        .append(safeCsv(textUnitIds))
-                        .append("\n");
-            }
-            sb.append("\n");
-        }
-
-        // 3. 文本单元列表
-        List<String> textUnitIds = Optional.ofNullable(community.getTextUnitIds()).orElse(List.of());
-        if (!textUnitIds.isEmpty()) {
-            sb.append("## 文本单元列表\n");
-            sb.append("type,id,document_id,text\n");
-            for (String id : textUnitIds) {
-                TextUnit t = textUnitMap.get(id);
-                if (t == null) continue;
-
-                String docId = "";
-                List<String> docIds = t.getDocumentIds();
-                if (docIds != null && !docIds.isEmpty()) {
-                    docId = docIds.get(0);
-                }
-
-                sb.append("text_unit,")
-                        .append(safeCsv(t.getId())).append(",")
-                        .append(safeCsv(docId)).append(",")
-                        .append(safeCsv(t.getText()))
-                        .append("\n");
-            }
-            sb.append("\n");
-        }
-
-        // 4. 子社区报告（children 是 List<Integer>，用已生成的 structuredByCommunityId 填充）
-        List<Integer> children = Optional.ofNullable(community.getChildren()).orElse(List.of());
-        List<Integer> existingChildIds = children.stream()
-                .filter(structuredByCommunityId::containsKey)
-                .toList();
-
-        if (!existingChildIds.isEmpty()) {
-            sb.append("## 子社区报告\n");
-            sb.append("type,sub_community_id,title,summary\n");
-            for (Integer childId : existingChildIds) {
-                CommunityReportsResult childResult = structuredByCommunityId.get(childId);
-                if (childResult == null || childResult.getStructuredOutput() == null) {
-                    continue;
-                }
-                var sr = childResult.getStructuredOutput();
-                sb.append("sub_community_report,")
-                        .append(safeCsv(String.valueOf(childId))).append(",")
-                        .append(safeCsv(sr.getTitle())).append(",")
-                        .append(safeCsv(sr.getSummary()))
-                        .append("\n");
-            }
-            sb.append("\n");
-        }
-
-        return sb.toString().trim();
-    }
-
-    private String safeCsv(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value
-                .replace("\n", " ")
-                .replace("\r", " ")
-                .replace(",", "，");
-    }
-
-    /**
-     * 把 LLM 的结构化输出 + 社区公共字段，拼成最终的 CommunityReport 行。
-     * 对齐 Python 的 COMMUNITY_REPORTS_FINAL_COLUMNS：
-     * [id, human_readable_id, community, level, parent, children, title, summary,
-     *  full_content, rank, rating_explanation, findings, full_content_json, period, size]
-     */
-    private CommunityReport mapToCommunityReport(
-            Community community,
-            CommunityReportsResult result,
-            int level
-    ) {
-        var structured = result.getStructuredOutput();
-
-        String findingsJson = null;
-        try {
-            findingsJson = objectMapper.writeValueAsString(
-                    Optional.ofNullable(structured.getFindings()).orElse(List.of())
+            List<CommunityContextRow> levelContext = LevelContextBuilder.buildLevelContext(
+                    reportsView,
+                    hierarchy,
+                    localContexts,
+                    level,
+                    strategy.getMaxContextTokens()
             );
-        } catch (JsonProcessingException e) {
-            log.warn("序列化 findings 失败，将 findings 置为空", e);
+
+            if (levelContext.isEmpty()) continue;
+
+            log.info("summarize communities: level={}, size={}, strictPythonMode={}",
+                    level, levelContext.size(), strictPythonMode);
+
+            List<FinalizeCommunityReportsOperation.RawReportRow> levelRows =
+                    generateLevelReports(levelContext, level, strategy);
+
+            rawRows.addAll(levelRows);
+
+            if (!strictPythonMode) {
+                for (FinalizeCommunityReportsOperation.RawReportRow r : levelRows) {
+                    reportsSoFar.add(new LevelContextBuilder.ReportRow(
+                            r.getCommunity(),
+                            r.getLevel(),
+                            r.getFullContent() == null ? "" : r.getFullContent()
+                    ));
+                }
+            }
         }
 
-        String fullContentJson = null;
+        return rawRows;
+    }
+
+    private List<FinalizeCommunityReportsOperation.RawReportRow> generateLevelReports(
+            List<CommunityContextRow> levelContext,
+            int level,
+            CommunityReportsStrategy strategy
+    ) {
+        int threads = Math.max(1, strategy.getConcurrentRequests());
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+
         try {
-            fullContentJson = objectMapper.writeValueAsString(structured);
-        } catch (JsonProcessingException e) {
-            log.warn("序列化 full_content_json 失败", e);
+            List<CompletableFuture<FinalizeCommunityReportsOperation.RawReportRow>> futures = new ArrayList<>();
+
+            for (CommunityContextRow row : levelContext) {
+                futures.add(CompletableFuture.supplyAsync(() -> {
+                    try {
+                        Integer communityIdObj = row.getCommunity();
+                        if (communityIdObj == null) return null;
+
+                        int communityId = communityIdObj;
+                        String ctx = row.getContextString() == null ? "" : row.getContextString();
+
+                        // ✅ maxReportLength 在这里真正传入
+                        CommunityReportsResult r = extractor.generate(ctx, strategy.getMaxReportLength());
+                        if (r == null || r.getStructuredOutput() == null) return null;
+
+                        CommunityReportResponse s = r.getStructuredOutput();
+
+                        String findingsJson = IOUtil.jsonSerialize(s.getFindings());
+                        String fullContentJson = IOUtil.jsonSerialize(s, true);
+
+                        return new FinalizeCommunityReportsOperation.RawReportRow(
+                                communityId,
+                                level,
+                                s.getTitle(),
+                                s.getSummary(),
+                                r.getOutput(),
+                                s.getRating(),
+                                s.getRatingExplanation(),
+                                findingsJson,
+                                fullContentJson
+                        );
+                    } catch (Exception e) {
+                        // 对齐 Python：单条失败当 None，不影响其他条
+                        log.warn("community report failed: level={}, community={}", level, row.getCommunity(), e);
+                        return null;
+                    }
+                }, pool));
+            }
+
+            List<FinalizeCommunityReportsOperation.RawReportRow> out = new ArrayList<>();
+            for (CompletableFuture<FinalizeCommunityReportsOperation.RawReportRow> f : futures) {
+                FinalizeCommunityReportsOperation.RawReportRow r = f.join();
+                if (r != null) out.add(r);
+            }
+            return out;
+
+        } finally {
+            pool.shutdown();
         }
-
-        Integer communityId = community.getCommunity();
-
-        return CommunityReport.builder()
-                .id(IdUtil.getSnowflakeNextIdStr())
-                // Python: human_readable_id = community
-                .humanReadableId(communityId)
-                .community(communityId)
-                .level(level)
-                .parent(community.getParent())
-                .children(Optional.ofNullable(community.getChildren()).orElse(List.of()))
-                .title(structured.getTitle())
-                .summary(structured.getSummary())
-                .fullContent(result.getOutput())
-                .rank(structured.getRating())
-                .ratingExplanation(structured.getRatingExplanation())
-                .findings(findingsJson)
-                .fullContentJson(fullContentJson)
-                .period(community.getPeriod())
-                .size(community.getSize())
-                .build();
     }
 }

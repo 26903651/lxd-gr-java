@@ -154,7 +154,7 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
     public List<TextUnit> loadTextUnits() {
         try {
             List<TextUnit> textUnits = new ArrayList<>();
-            String filter = "extra[\"graph\"] == \"1\"";
+            String filter = "extra[\"graph\"] == 1";
             List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getCollectionNames().getContentCollectionName(), List.of("metadata", "page_content", "graph_main", "graph_document_ids", "graph_entity_ids", "graph_relationship_ids", "graph_covariate_ids"), filter);
             for (QueryResultsWrapper.RowRecord rowRecord : rowRecords) {
                 Map<String, Object> fieldValues = rowRecord.getFieldValues();
@@ -314,11 +314,10 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
             safeAddString(obj, "subject_id", c.getSubjectId());
             safeAddString(obj, "object_id", c.getObjectId());
             safeAddString(obj, "status", c.getStatus());
-            safeAddInstantAsString(obj, "start_date", c.getStartDate());
-            safeAddInstantAsString(obj, "end_date", c.getEndDate());
+            safeAddInstant(obj, "start_date", c.getStartDate());
+            safeAddInstant(obj, "end_date", c.getEndDate());
             safeAddString(obj, "source_text", c.getSourceText());
             safeAddString(obj, "text_unit_id", c.getTextUnitId());
-            safeAddString(obj, "record_id", c.getRecordId());
 
             // 向量：description 优先，其次 source_text
             String embedText = !StrUtil.isBlank(c.getDescription()) ? c.getDescription() : c.getSourceText();
@@ -337,7 +336,7 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
 
     @Override
     public List<Covariate> loadCovariates() {
-        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getCollectionNames().getCovariateCollectionName(), List.of("id", "human_readable_id", "covariate_type", "type", "description", "subject_id", "object_id", "status", "start_date", "end_date", "source_text", "text_unit_id", "record_id"));
+        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getCollectionNames().getCovariateCollectionName(), List.of("id", "human_readable_id", "covariate_type", "type", "description", "subject_id", "object_id", "status", "start_date", "end_date", "source_text", "text_unit_id"));
         try {
             List<Covariate> covariates = rowRecordsToModels(rowRecords, Covariate.class);
             covariates.sort(Comparator.comparingInt(t -> t.getHumanReadableId() == null ? -1 : t.getHumanReadableId()));
@@ -378,7 +377,8 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
     private <T> List<T> rowRecordsToModels(List<QueryResultsWrapper.RowRecord> rowRecordList, Class<T> modelClass) throws IOException {
         List<T> modelList = new ArrayList<>();
         for (QueryResultsWrapper.RowRecord rowRecord : rowRecordList) {
-            modelList.add(IOUtil.convertValue(rowRecord, modelClass));
+            String jsonStr = gson.toJson(rowRecord.getFieldValues());
+            modelList.add(IOUtil.jsonDeserializeWithNoType(jsonStr, modelClass));
         }
         return modelList;
     }
@@ -427,6 +427,10 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
         if (value != null) obj.addProperty(field, value.toString()); // ISO-8601
     }
 
+    private void safeAddInstant(JsonObject obj, String field, Instant value) {
+        if (value != null) obj.addProperty(field, instantToMicros(value));
+    }
+
     private void safeAddMetadata(JsonObject obj, String field, Map<String, Object> metadata) {
         if (metadata == null || metadata.isEmpty()) return;
         JsonElement tree = gson.toJsonTree(metadata);
@@ -435,5 +439,13 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
         } else if (tree != null) {
             obj.add(field, tree);
         }
+    }
+
+    /**
+     * 将 Instant 转换为微秒精度的时间戳
+     * Milvus Timestamptz 字段需要微秒（microseconds）级别的时间戳
+     */
+    public static long instantToMicros(Instant instant) {
+        return instant.getEpochSecond() * 1_000_000 + instant.getNano() / 1_000;
     }
 }

@@ -90,11 +90,13 @@ public class GraphConfig {
             schema.addField(AddFieldReq.builder()
                     .fieldName("x")
                     .dataType(DataType.Double)
+                    .isNullable(true)
                     .build());
             // y
             schema.addField(AddFieldReq.builder()
                     .fieldName("y")
                     .dataType(DataType.Double)
+                    .isNullable(true)
                     .build());
             // embedding
             schema.addField(AddFieldReq.builder()
@@ -232,6 +234,7 @@ public class GraphConfig {
             schema.addField(AddFieldReq.builder()
                     .fieldName("children")
                     .dataType(DataType.JSON)
+                    .isNullable(true)
                     .build());
             // title
             schema.addField(AddFieldReq.builder()
@@ -326,6 +329,7 @@ public class GraphConfig {
             schema.addField(AddFieldReq.builder()
                     .fieldName("children")
                     .dataType(DataType.JSON)
+                    .isNullable(true)
                     .build());
             // title
             schema.addField(AddFieldReq.builder()
@@ -448,40 +452,37 @@ public class GraphConfig {
                     .fieldName("object_id")
                     .dataType(DataType.VarChar)
                     .maxLength(65535)
+                    .isNullable(true)
                     .build());
             // status
             schema.addField(AddFieldReq.builder()
                     .fieldName("status")
                     .dataType(DataType.VarChar)
                     .maxLength(65535)
+                    .isNullable(true)
                     .build());
             // start_date
             schema.addField(AddFieldReq.builder()
                     .fieldName("start_date")
-                    .dataType(DataType.VarChar)
-                    .maxLength(65535)
+                    .dataType(DataType.Int64)
+                    .isNullable(true)
                     .build());
             // end_date
             schema.addField(AddFieldReq.builder()
                     .fieldName("end_date")
-                    .dataType(DataType.VarChar)
-                    .maxLength(65535)
+                    .dataType(DataType.Int64)
+                    .isNullable(true)
                     .build());
             // source_text
             schema.addField(AddFieldReq.builder()
                     .fieldName("source_text")
                     .dataType(DataType.VarChar)
                     .maxLength(65535)
+                    .isNullable(true)
                     .build());
             // text_unit_id
             schema.addField(AddFieldReq.builder()
                     .fieldName("text_unit_id")
-                    .dataType(DataType.VarChar)
-                    .maxLength(65535)
-                    .build());
-            // record_id
-            schema.addField(AddFieldReq.builder()
-                    .fieldName("record_id")
                     .dataType(DataType.VarChar)
                     .maxLength(65535)
                     .build());

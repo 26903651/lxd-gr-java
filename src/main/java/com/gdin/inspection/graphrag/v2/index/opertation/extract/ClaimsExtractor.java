@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
  */
 @Slf4j
 @Component
-public class ExtractClaimsExtractor {
+public class ClaimsExtractor {
 
     @Resource
     private AssistantGenerator assistantGenerator;
@@ -50,12 +50,13 @@ public class ExtractClaimsExtractor {
     private static final String KEY_COMPLETION_DELIMITER = "completion_delimiter";
 
     public ClaimExtractorResult extract(
+            String textUnitId,
             List<String> texts,
             List<String> entitySpecs,
             Map<String, String> resolvedEntitiesMap,
             ExtractClaimsStrategy strategy
     ) {
-        if (CollectionUtil.isEmpty(texts)) return new ClaimExtractorResult(List.of(), Map.of());
+        if (CollectionUtil.isEmpty(texts)) return new ClaimExtractorResult(textUnitId, List.of(), Map.of());
         if (strategy == null || StrUtil.isBlank(strategy.getClaimDescription())) throw new IllegalArgumentException("claim_description is required for claim extraction");
 
         List<String> specs = CollectionUtil.isEmpty(entitySpecs) ? DEFAULT_ENTITY_TYPES_ZH : entitySpecs;
@@ -100,7 +101,7 @@ public class ExtractClaimsExtractor {
             }
         }
 
-        return new ClaimExtractorResult(allClaims, sourceDocs);
+        return new ClaimExtractorResult(textUnitId, allClaims, sourceDocs);
     }
 
     private List<Map<String, Object>> processDocument(
@@ -247,12 +248,6 @@ public class ExtractClaimsExtractor {
         return sb.toString();
     }
 
-    @Value
-    public static class ClaimExtractorResult {
-        List<Map<String, Object>> output;
-        Map<String, Object> sourceDocs;
-    }
-
     /** 供 Covariate 组装用：把日期字符串转 Instant */
     public static Instant parseInstantLoose(String s) {
         if (StrUtil.isBlank(s) || "NONE".equalsIgnoreCase(s.trim())) return null;
@@ -265,5 +260,12 @@ public class ExtractClaimsExtractor {
         } catch (Exception ignore) {
             return null;
         }
+    }
+
+    @Value
+    public static class ClaimExtractorResult {
+        String textUnitId;
+        List<Map<String, Object>> output;
+        Map<String, Object> sourceDocs;
     }
 }

@@ -1,5 +1,6 @@
 package com.gdin.inspection.graphrag.v2.index.opertation;
 
+import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.StrUtil;
 import com.gdin.inspection.graphrag.v2.index.opertation.extract.DescriptionSummaryExtractor;
 import com.gdin.inspection.graphrag.v2.models.Entity;
@@ -24,9 +25,7 @@ public class SummarizeDescriptionsOperation {
      * 输出：每个 title -> 一条 summary。
      */
     public List<EntityDescriptionSummary> summarizeEntities(List<Entity> entities, int maxWords) {
-        if (entities == null || entities.isEmpty()) {
-            return Collections.emptyList();
-        }
+        if (CollectionUtil.isEmpty(entities)) return Collections.emptyList();
 
         // 以 title 为 key 聚合
         Map<String, List<String>> titleToDescriptions = new LinkedHashMap<>();
@@ -34,9 +33,7 @@ public class SummarizeDescriptionsOperation {
         for (Entity entity : entities) {
             String title = entity.getTitle();
             String desc = entity.getDescription();
-            if (StrUtil.isBlank(title) || StrUtil.isBlank(desc)) {
-                continue;
-            }
+            if (StrUtil.isBlank(title) || StrUtil.isBlank(desc)) continue;
 
             List<String> pieces = splitDescription(desc);
             if (pieces.isEmpty()) continue;
@@ -71,11 +68,8 @@ public class SummarizeDescriptionsOperation {
     /**
      * 对关系做描述摘要，对齐 Python 的 relationship_summaries 表。
      */
-    public List<RelationshipDescriptionSummary> summarizeRelationships(List<Relationship> relationships,
-                                                                       int maxWords) {
-        if (relationships == null || relationships.isEmpty()) {
-            return Collections.emptyList();
-        }
+    public List<RelationshipDescriptionSummary> summarizeRelationships(List<Relationship> relationships, int maxWords) {
+        if (CollectionUtil.isEmpty(relationships)) return Collections.emptyList();
 
         // 以 (source, target) 为 key 聚合
         Map<String, List<String>> keyToDescriptions = new LinkedHashMap<>();
@@ -84,9 +78,7 @@ public class SummarizeDescriptionsOperation {
             String source = rel.getSource();
             String target = rel.getTarget();
             String desc = rel.getDescription();
-            if (StrUtil.isBlank(source) || StrUtil.isBlank(target) || StrUtil.isBlank(desc)) {
-                continue;
-            }
+            if (StrUtil.isBlank(source) || StrUtil.isBlank(target) || StrUtil.isBlank(desc)) continue;
 
             List<String> pieces = splitDescription(desc);
             if (pieces.isEmpty()) continue;
@@ -126,7 +118,7 @@ public class SummarizeDescriptionsOperation {
     }
 
     /**
-     * 把 GraphExtractor 合并好的 description（换行/分号拼起来）拆成多条。
+     * 把 GraphExtractor 合并好的 description（换行拼起来）拆成多条。
      */
     private List<String> splitDescription(String description) {
         if (StrUtil.isBlank(description)) return Collections.emptyList();

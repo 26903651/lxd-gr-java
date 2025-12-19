@@ -27,13 +27,22 @@ public class IOUtil {
                 ObjectMapper.DefaultTyping.NON_FINAL,
                 JsonTypeInfo.As.PROPERTY);
         objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-
         objectMapper.registerModule(new JavaTimeModule());
         // 避免写成时间戳（否则 Instant 会变成 long）
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
         simpleMapper.registerModule(new JavaTimeModule());
         // 避免写成时间戳（否则 Instant 会变成 long）
         simpleMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        simpleMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+    }
+
+    public static ObjectMapper mapper() {
+        return objectMapper;
+    }
+
+    public static ObjectMapper simpleMapper() {
+        return simpleMapper;
     }
 
     public static <T> T convertValue(Object fromValue, Class<T> clazz) throws IOException {

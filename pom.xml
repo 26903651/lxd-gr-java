@@ -47,8 +47,8 @@
         <apache-httpclient.version>5.3.1</apache-httpclient.version>
         <jjwt.version>0.12.6</jjwt.version>
         <icu4j.version>77.1</icu4j.version>
-        <tokenizers.version>0.33.0</tokenizers.version>
         <hanlp.version>portable-1.8.6</hanlp.version>
+        <jtokkit.version>1.1.0</jtokkit.version>
     </properties>
 
     <dependencies>
@@ -143,9 +143,9 @@
         </dependency>
 
         <dependency>
-            <groupId>ai.djl.huggingface</groupId>
-            <artifactId>tokenizers</artifactId>
-            <version>${tokenizers.version}</version>
+            <groupId>com.knuddels</groupId>
+            <artifactId>jtokkit</artifactId>
+            <version>${jtokkit.version}</version>
         </dependency>
 
         <dependency>

@@ -1,6 +1,7 @@
 package com.gdin.inspection.graphrag.util;
 
 import cn.hutool.core.collection.CollectionUtil;
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import io.milvus.v2.client.MilvusClientV2;
 import io.milvus.v2.service.vector.request.InsertReq;
@@ -10,11 +11,13 @@ import io.milvus.v2.service.vector.response.InsertResp;
 import io.milvus.v2.service.vector.response.QueryResp;
 import io.milvus.v2.service.vector.response.UpsertResp;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
 import java.util.List;
 
+@Slf4j
 @Component
 public class MilvusUtil {
     @Resource
@@ -33,9 +36,16 @@ public class MilvusUtil {
                     .data(subList)
                     .build();
 
-            InsertResp insertResp = milvusClientV2.insert(insertReq);
-            ensureInserted(collectionName, insertResp); // 只要验证本批里任意一个 pk 可查到即可
-            lastResp = insertResp;
+            try {
+                InsertResp insertResp = milvusClientV2.insert(insertReq);
+                ensureInserted(collectionName, insertResp); // 只要验证本批里任意一个 pk 可查到即可
+                lastResp = insertResp;
+            }
+            catch(Exception e) {
+                log.error("插入数据报错: {}", new Gson().toJson(subList));
+                throw e;
+            }
+
         }
         return lastResp == null ? InsertResp.builder().InsertCnt(0L).build() : lastResp;
     }

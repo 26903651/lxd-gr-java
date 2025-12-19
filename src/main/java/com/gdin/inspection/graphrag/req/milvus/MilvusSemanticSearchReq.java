@@ -1,6 +1,7 @@
 package com.gdin.inspection.graphrag.req.milvus;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -36,7 +37,10 @@ public class MilvusSemanticSearchReq {
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "每组返回数量")
     private Integer groupSize;
 
+    @Builder.Default
     private Integer offset=0;
+    @Builder.Default
     private Integer limit=100;
+    @Builder.Default
     private Integer roundDecimal=-1;
 }

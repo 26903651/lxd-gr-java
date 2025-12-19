@@ -75,7 +75,8 @@ public class StandardUpdatePipelineRegistrar {
                     ctx.get("extraction_prompt"),
                     ctx.get("entity_types"),
                     ctx.get("entity_summary_max_words"),
-                    ctx.get("relationship_summary_max_words")
+                    ctx.get("relationship_summary_max_words"),
+                    ctx.get("concurrent_requests")
             );
             ctx.put("entities", out.getEntities());
             ctx.put("relationships", out.getRelationships());

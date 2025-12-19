@@ -8,40 +8,24 @@ import com.gdin.inspection.graphrag.service.AssistantGenerator;
 import com.gdin.inspection.graphrag.util.SseUtil;
 import com.gdin.inspection.graphrag.v2.index.prompts.ExtractGraphPromptsZh;
 import com.gdin.inspection.graphrag.v2.index.strategy.ExtractGraphStrategy;
-import com.gdin.inspection.graphrag.v2.models.Entity;
-import com.gdin.inspection.graphrag.v2.models.Relationship;
 import com.gdin.inspection.graphrag.v2.models.TextUnit;
 import com.gdin.inspection.graphrag.v2.util.PyStrUtil;
 import dev.langchain4j.service.TokenStream;
 import jakarta.annotation.Resource;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * 对齐 Python 版的图抽取逻辑：
- *
  * - 对每个 TextUnit 调用 LLM 抽取 ("entity", ...) 和 ("relationship", ...) 记录
  * - 支持 CONTINUE / LOOP 多轮 gleaning
- * - 在 Java 侧完成合并：
- *   - 实体按 (title, type) groupby：
- *       description = 多个描述用换行拼接
- *       text_unit_ids = source_id 列表
- *       frequency     = 出现次数
- *   - 关系按 (source, target) groupby：
- *       description = 多个描述用换行拼接
- *       text_unit_ids = source_id 列表
- *       weight        = 每条记录 weight 的和（解析失败时视为 1.0）
- * - 然后额外计算：
- *   - Entity.degree = 该实体参与的边数量
- *   - Relationship.combined_degree = degree(source) + degree(target)
- *
- * id / human_readable_id 留给后续 finalize 步骤统一赋值。
  */
 @Slf4j
 @Service
@@ -68,12 +52,12 @@ public class GraphExtractor {
     /**
      * 对一批 TextUnit 执行图抽取，返回合并并带统计信息的实体和关系列表。
      */
-    public ExtractionResult extract(
+    public Result extract(
             List<TextUnit> textUnits,
             List<String> entitySpecs,
             ExtractGraphStrategy strategy
     ) {
-        if (CollectionUtil.isEmpty(textUnits)) return new ExtractionResult(List.of(), List.of());
+        if (CollectionUtil.isEmpty(textUnits)) return new Result(List.of(), List.of());
         if (strategy == null) throw new IllegalArgumentException("strategy is required for graph extraction");
 
         List<String> specs = CollectionUtil.isEmpty(entitySpecs) ? DEFAULT_ENTITY_TYPES_ZH : entitySpecs;
@@ -98,23 +82,27 @@ public class GraphExtractor {
         promptArgs.put(KEY_RECORD_DELIMITER, recordDelimiter);
         promptArgs.put(KEY_COMPLETION_DELIMITER, completionDelimiter);
 
-        for (TextUnit tu : textUnits) {
-            String rawOutput = extractForSingleTextUnit(extractionPrompt, promptArgs, tu.getText(), maxGleanings);
-            ParsedResult parsed = parseRecords(rawOutput, tu.getId(), promptArgs);
-            rawEntities.addAll(parsed.entities);
-            rawRelationships.addAll(parsed.relationships);
+        int threads = Math.max(1, strategy.getConcurrentRequests());
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+
+        try {
+            List<CompletableFuture<Result>> futures = new ArrayList<>();
+            for (TextUnit tu : textUnits) {
+                futures.add(CompletableFuture.supplyAsync(() -> {
+                    String rawOutput = extractForSingleTextUnit(extractionPrompt, promptArgs, tu.getText(), maxGleanings);
+                    return parseRecords(rawOutput, tu.getId(), promptArgs);
+                }, pool));
+            }
+
+            for (CompletableFuture<Result> future : futures) {
+                Result parsed = future.join();
+                rawEntities.addAll(parsed.entities);
+                rawRelationships.addAll(parsed.relationships);
+            }
+        } finally {
+            pool.shutdown();
         }
-
-        // 对齐 Python extract_graph._merge_entities / _merge_relationships
-        List<Entity> mergedEntities = mergeEntities(rawEntities);
-        List<Relationship> mergedRelationships = mergeRelationships(rawRelationships);
-
-        // 根据合并后的边，计算节点度数和 edge.combined_degree
-        Map<String, Integer> degreeMap = computeDegrees(mergedRelationships);
-        List<Entity> finalEntities = applyDegreesToEntities(mergedEntities, degreeMap);
-        List<Relationship> finalRelationships = applyCombinedDegreeToRelationships(mergedRelationships, degreeMap);
-
-        return new ExtractionResult(finalEntities, finalRelationships);
+        return new Result(rawEntities, rawRelationships);
     }
 
     /**
@@ -211,7 +199,7 @@ public class GraphExtractor {
     // 解析 LLM 输出，生成“原始”实体 / 关系记录（对应 graph_extractor._process_results 的反向）
     // ----------------------------------------------------------------------
 
-    private ParsedResult parseRecords(String combined, String textUnitId, Map<String, String> promptArgs) {
+    private Result parseRecords(String combined, String textUnitId, Map<String, String> promptArgs) {
         String recordDelimiter = promptArgs.get(KEY_RECORD_DELIMITER);
         String completionDelimiter = promptArgs.get(KEY_COMPLETION_DELIMITER);
         String tupleDelimiter = promptArgs.get(KEY_TUPLE_DELIMITER);
@@ -219,7 +207,7 @@ public class GraphExtractor {
         List<RawEntity> entities = new ArrayList<>();
         List<RawRelationship> relationships = new ArrayList<>();
 
-        if (StrUtil.isBlank(combined)) return new ParsedResult(entities, relationships);
+        if (StrUtil.isBlank(combined)) return new Result(entities, relationships);
 
         // 去掉 completionDelimiter
         String body = stripSuffix(StrUtil.blankToDefault(combined, ""), completionDelimiter);
@@ -239,13 +227,13 @@ public class GraphExtractor {
 
             String tag = PyStrUtil.cleanStr(fields[0]).toLowerCase(Locale.ROOT);
 
-            if ("entity".equals(tag) && fields.length >= 4) {
+            if ("\"entity\"".equals(tag) && fields.length >= 4) {
                 String name = PyStrUtil.cleanStr(fields[1]);
                 String type = PyStrUtil.cleanStr(fields[2]);
                 String desc = PyStrUtil.cleanStr(fields[3]);
                 if (StrUtil.isBlank(name)) continue;
                 entities.add(new RawEntity(name, type, desc, textUnitId));
-            } else if ("relationship".equals(tag) && fields.length >= 4) {
+            } else if ("\"relationship\"".equals(tag) && fields.length >= 4) {
                 String source = PyStrUtil.cleanStr(fields[1]);
                 String target = PyStrUtil.cleanStr(fields[2]);
                 String desc = PyStrUtil.cleanStr(fields[3]);
@@ -262,219 +250,29 @@ public class GraphExtractor {
                 relationships.add(new RawRelationship(source, target, desc, textUnitId, weight));
             }
         }
-        return new ParsedResult(entities, relationships);
+        return new Result(entities, relationships);
     }
 
-    private String normalizeKey(String s) {
-        if (s == null) return "";
-        return s.trim().toLowerCase(Locale.ROOT);
+    @Value
+    public static class RawEntity {
+        String title;
+        String type;
+        String description;
+        String textUnitId;
     }
 
-    // ----------------------------------------------------------------------
-    // Entity 合并：按 (title, type) 聚合，统计 frequency / text_unit_ids / description(list)
-    // 对齐 Python extract_graph._merge_entities
-    // ----------------------------------------------------------------------
-
-    private List<Entity> mergeEntities(List<RawEntity> rawEntities) {
-        Map<String, EntityBuilderHelper> map = new LinkedHashMap<>();
-
-        for (RawEntity re : rawEntities) {
-            String key = normalizeKey(re.title) + "||" + normalizeKey(re.type);
-            EntityBuilderHelper helper = map.computeIfAbsent(key, k -> new EntityBuilderHelper(re.title, re.type));
-            helper.addMention(re.description, re.textUnitId);
-        }
-
-        List<Entity> entities = new ArrayList<>();
-        for (EntityBuilderHelper helper : map.values()) {
-            String description = String.join("\n", helper.descriptions); // 对齐 Python：用换行拼接
-            entities.add(
-                    Entity.builder()
-                            .id(null)
-                            .humanReadableId(null)
-                            .title(helper.title)
-                            .type(helper.type)
-                            .description(description)
-                            .textUnitIds(new ArrayList<>(helper.textUnitIds))
-                            .frequency(helper.frequency)
-                            .degree(null)   // 下面再填
-                            .x(null)
-                            .y(null)
-                            .build()
-            );
-        }
-
-        return entities;
+    @Value
+    public static class RawRelationship {
+        String source;
+        String target;
+        String description;
+        String textUnitId;
+        double weight;
     }
 
-    // ----------------------------------------------------------------------
-    // Relationship 合并：按 (source, target) 聚合，计算 weight / text_unit_ids / description(list)
-    // 对齐 Python extract_graph._merge_relationships
-    // ----------------------------------------------------------------------
-
-    private List<Relationship> mergeRelationships(List<RawRelationship> rawRelationships) {
-        Map<String, RelationshipBuilderHelper> map = new LinkedHashMap<>();
-
-        for (RawRelationship rr : rawRelationships) {
-            String key = normalizeKey(rr.source) + "||" + normalizeKey(rr.target);
-            RelationshipBuilderHelper helper =
-                    map.computeIfAbsent(key, k -> new RelationshipBuilderHelper(rr.source, rr.target));
-            helper.addInstance(rr.description, rr.textUnitId, rr.weight);
-        }
-
-        List<Relationship> relationships = new ArrayList<>();
-        for (RelationshipBuilderHelper helper : map.values()) {
-            String description = String.join("\n", helper.descriptions);
-            double weightSum = helper.weightSum; // 完全对齐 Python：weight = 所有边的 weight 之和
-
-            relationships.add(
-                    Relationship.builder()
-                            .id(null)
-                            .humanReadableId(null)
-                            .source(helper.source)
-                            .target(helper.target)
-                            .description(description)
-                            .weight(weightSum)
-                            .combinedDegree(null)  // 下面再填
-                            .textUnitIds(new ArrayList<>(helper.textUnitIds))
-                            .build()
-            );
-        }
-
-        return relationships;
-    }
-
-    // ----------------------------------------------------------------------
-    // 计算度数 & combined_degree（Python 后续 cluster 流程里才算，我们在这里提前算好）
-    // ----------------------------------------------------------------------
-
-    private Map<String, Integer> computeDegrees(List<Relationship> relationships) {
-        Map<String, Integer> degreeMap = new HashMap<>();
-        for (Relationship r : relationships) {
-            String sKey = normalizeKey(r.getSource());
-            String tKey = normalizeKey(r.getTarget());
-            degreeMap.put(sKey, degreeMap.getOrDefault(sKey, 0) + 1);
-            degreeMap.put(tKey, degreeMap.getOrDefault(tKey, 0) + 1);
-        }
-        return degreeMap;
-    }
-
-    private List<Entity> applyDegreesToEntities(List<Entity> entities,
-                                                Map<String, Integer> degreeMap) {
-        return entities.stream()
-                .map(e -> {
-                    String key = normalizeKey(e.getTitle());
-                    int deg = degreeMap.getOrDefault(key, 0);
-                    return Entity.builder()
-                            .id(e.getId())
-                            .humanReadableId(e.getHumanReadableId())
-                            .title(e.getTitle())
-                            .type(e.getType())
-                            .description(e.getDescription())
-                            .textUnitIds(e.getTextUnitIds())
-                            .frequency(e.getFrequency())
-                            .degree(deg)
-                            .x(e.getX())
-                            .y(e.getY())
-                            .build();
-                })
-                .collect(Collectors.toList());
-    }
-
-    private List<Relationship> applyCombinedDegreeToRelationships(List<Relationship> relationships,
-                                                                  Map<String, Integer> degreeMap) {
-        return relationships.stream()
-                .map(r -> {
-                    String sKey = normalizeKey(r.getSource());
-                    String tKey = normalizeKey(r.getTarget());
-                    int sDeg = degreeMap.getOrDefault(sKey, 0);
-                    int tDeg = degreeMap.getOrDefault(tKey, 0);
-                    double combined = sDeg + tDeg;
-                    return Relationship.builder()
-                            .id(r.getId())
-                            .humanReadableId(r.getHumanReadableId())
-                            .source(r.getSource())
-                            .target(r.getTarget())
-                            .description(r.getDescription())
-                            .weight(r.getWeight())
-                            .combinedDegree(combined)
-                            .textUnitIds(r.getTextUnitIds())
-                            .build();
-                })
-                .collect(Collectors.toList());
-    }
-
-    // ---- 内部辅助类型：原始记录 + 合并辅助器 ----
-    private record RawEntity(String title, String type, String description, String textUnitId) {}
-
-    private record RawRelationship(String source, String target, String description, String textUnitId, double weight) {}
-
-    private static class EntityBuilderHelper {
-        final String title;
-        final String type;
-        final List<String> descriptions = new ArrayList<>();
-        final Set<String> textUnitIds = new LinkedHashSet<>();
-        int frequency = 0;
-
-        EntityBuilderHelper(String title, String type) {
-            this.title = title;
-            this.type = type;
-        }
-
-        void addMention(String description, String textUnitId) {
-            frequency += 1;
-            if (StrUtil.isNotBlank(description) && !descriptions.contains(description)) {
-                descriptions.add(description);
-            }
-            if (StrUtil.isNotBlank(textUnitId)) {
-                textUnitIds.add(textUnitId);
-            }
-        }
-    }
-
-    private static class RelationshipBuilderHelper {
-        final String source;
-        final String target;
-        final List<String> descriptions = new ArrayList<>();
-        final Set<String> textUnitIds = new LinkedHashSet<>();
-        int instanceCount = 0;
-        double weightSum = 0.0;
-
-        RelationshipBuilderHelper(String source, String target) {
-            this.source = source;
-            this.target = target;
-        }
-
-        void addInstance(String description, String textUnitId, double weight) {
-            instanceCount += 1;
-            weightSum += weight;
-            if (StrUtil.isNotBlank(description) && !descriptions.contains(description)) {
-                descriptions.add(description);
-            }
-            if (StrUtil.isNotBlank(textUnitId)) {
-                textUnitIds.add(textUnitId);
-            }
-        }
-    }
-
-    private static class ParsedResult {
-        final List<RawEntity> entities;
-        final List<RawRelationship> relationships;
-
-        ParsedResult(List<RawEntity> entities, List<RawRelationship> relationships) {
-            this.entities = entities;
-            this.relationships = relationships;
-        }
-    }
-
-    @Getter
-    @NoArgsConstructor
-    public static class ExtractionResult {
-        private List<Entity> entities;
-        private List<Relationship> relationships;
-
-        public ExtractionResult(List<Entity> entities, List<Relationship> relationships) {
-            this.entities = entities;
-            this.relationships = relationships;
-        }
+    @Value
+    public static class Result {
+        List<RawEntity> entities;
+        List<RawRelationship> relationships;
     }
 }

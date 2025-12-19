@@ -34,7 +34,7 @@ public class CommunityReportResponse {
     List<FindingModel> findings;
 
     /**
-     * 对社区重要性 / 风险等的评分，0~1 的浮点数。
+     * 对社区重要性 / 风险等的评分。
      */
     @JsonProperty("rating")
     Double rating;

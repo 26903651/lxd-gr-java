@@ -3,7 +3,7 @@ package com.gdin.inspection.graphrag.v2.index.workflows;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.StrUtil;
 import com.gdin.inspection.graphrag.v2.index.opertation.ExtractCovariatesOperation;
-import com.gdin.inspection.graphrag.v2.index.opertation.extract.ExtractClaimsExtractor;
+import com.gdin.inspection.graphrag.v2.index.opertation.extract.ClaimsExtractor;
 import com.gdin.inspection.graphrag.v2.index.strategy.ExtractClaimsStrategy;
 import com.gdin.inspection.graphrag.v2.models.Covariate;
 import com.gdin.inspection.graphrag.v2.models.TextUnit;
@@ -21,7 +21,7 @@ import java.util.List;
 public class ExtractCovariatesWorkflow {
 
     @Resource
-    private ExtractCovariatesOperation op;
+    private ExtractCovariatesOperation extractCovariatesOperation;
 
     public List<Covariate> run(
             Boolean extractClaimsEnabled,
@@ -38,7 +38,8 @@ public class ExtractCovariatesWorkflow {
             List<String> entityTypesOrNames,
 
             // ==== extraction_prompt（python strategy 可覆盖）====
-            String extractionPrompt
+            String extractionPrompt,
+            Integer concurrentRequests
     ) {
         boolean enabled = extractClaimsEnabled != null && extractClaimsEnabled;
         if (!enabled) {
@@ -49,7 +50,7 @@ public class ExtractCovariatesWorkflow {
         if (StrUtil.isBlank(claimDescription)) throw new IllegalStateException("claimDescription 不能为空");
 
         // Python：entity_types is None -> DEFAULT_ENTITY_TYPES
-        List<String> specs = CollectionUtil.isEmpty(entityTypesOrNames) ? ExtractClaimsExtractor.DEFAULT_ENTITY_TYPES_ZH : entityTypesOrNames;
+        List<String> specs = CollectionUtil.isEmpty(entityTypesOrNames) ? ClaimsExtractor.DEFAULT_ENTITY_TYPES_ZH : entityTypesOrNames;
 
         // 直接贴合 Python 的 strategy_config 字段与默认 delimiter
         ExtractClaimsStrategy strategy = ExtractClaimsStrategy.builder()
@@ -60,8 +61,9 @@ public class ExtractCovariatesWorkflow {
                 .recordDelimiter(recordDelimiter)
                 .completionDelimiter(completionDelimiter)
                 .extractionPrompt(extractionPrompt)
+                .concurrentRequests(concurrentRequests)
                 .build();
 
-        return op.extractCovariates(textUnits, "claim", specs, strategy);
+        return extractCovariatesOperation.extractCovariates(textUnits, "claim", specs, strategy);
     }
 }

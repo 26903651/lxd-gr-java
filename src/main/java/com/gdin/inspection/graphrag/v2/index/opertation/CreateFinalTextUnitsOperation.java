@@ -18,15 +18,9 @@ public class CreateFinalTextUnitsOperation {
             List<Relationship> finalRelationships,
             List<Covariate> finalCovariates // 允许为 null
     ) {
-        if (CollectionUtil.isEmpty(textUnits)) {
-            throw new IllegalArgumentException("textUnits 不能为空");
-        }
-        if (CollectionUtil.isEmpty(finalEntities)) {
-            throw new IllegalArgumentException("finalEntities 不能为空");
-        }
-        if (CollectionUtil.isEmpty(finalRelationships)) {
-            throw new IllegalArgumentException("finalRelationships 不能为空");
-        }
+        if (CollectionUtil.isEmpty(textUnits)) throw new IllegalArgumentException("textUnits 不能为空");
+        if (CollectionUtil.isEmpty(finalEntities)) throw new IllegalArgumentException("finalEntities 不能为空");
+        if (CollectionUtil.isEmpty(finalRelationships)) throw new IllegalArgumentException("finalRelationships 不能为空");
 
         // === _entities(df): text_unit_id -> entity_ids(unique) ===
         Map<String, LinkedHashSet<String>> tuToEntityIds = new LinkedHashMap<>();

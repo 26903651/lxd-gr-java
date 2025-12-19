@@ -1,9 +1,9 @@
 package com.gdin.inspection.graphrag.v2;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gdin.inspection.graphrag.util.IOUtil;
 import com.gdin.inspection.graphrag.v2.models.Entity;
 import com.gdin.inspection.graphrag.v2.models.TextUnit;
-import com.gdin.inspection.graphrag.v2.util.JsonUtils;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
@@ -25,7 +25,7 @@ public class ModelRoundTripTest {
     @Resource
     private ResourceLoader resourceLoader;
 
-    private final ObjectMapper mapper = JsonUtils.mapper();
+    private final ObjectMapper mapper = IOUtil.mapper();
 
     @Test
     public void testEntityDeserializationRoundTrip() throws Exception {

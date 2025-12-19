@@ -3,7 +3,9 @@ package com.gdin.inspection.graphrag.v2.storage;
 import cn.hutool.core.collection.CollectionUtil;
 import com.gdin.inspection.graphrag.config.properties.GraphProperties;
 import com.gdin.inspection.graphrag.req.milvus.MilvusQueryReq;
+import com.gdin.inspection.graphrag.req.milvus.MilvusUpsertReq;
 import com.gdin.inspection.graphrag.service.MilvusSearchService;
+import com.gdin.inspection.graphrag.service.MilvusUpsertService;
 import com.gdin.inspection.graphrag.util.MilvusUtil;
 import com.gdin.inspection.graphrag.v2.models.TextUnit;
 import com.google.gson.*;
@@ -25,6 +27,9 @@ public class KnowledgeSliceWriteBackService {
 
     @Resource
     private MilvusUtil milvusUtil;
+
+    @Resource
+    private MilvusUpsertService milvusUpsertService;
 
     /**
      * 把 finalTextUnits 生成的 entity_ids / relationship_ids / covariate_ids / human_readable_id 写回知识库切片 metadata。
@@ -74,7 +79,7 @@ public class KnowledgeSliceWriteBackService {
             if (finalTu == null) continue;
 
             JsonObject extra = row.has("extra") ? row.getAsJsonObject("extra") : new JsonObject();
-            extra.addProperty("graph", "1");
+            extra.addProperty("graph", 1);
 
             JsonObject graphMain = row.has("graph_main") ? row.getAsJsonObject("graph_main") : new JsonObject();
             graphMain.addProperty("human_readable_id", finalTu.getHumanReadableId() == null ? -1 : finalTu.getHumanReadableId());
@@ -98,7 +103,13 @@ public class KnowledgeSliceWriteBackService {
         }
 
         // 4) upsert 回去
-        milvusUtil.upsertByBatch(graphProperties.getCollectionNames().getContentCollectionName(), upserts);
+        for (JsonObject upsertRow : upserts) {
+            milvusUpsertService.updateEntity(MilvusUpsertReq.builder()
+                    .collectionName(graphProperties.getCollectionNames().getContentCollectionName())
+                    .id(upsertRow.getAsJsonPrimitive("id").getAsLong())
+                    .valueMap((Map)upsertRow.asMap())
+                    .build());
+        }
 
         log.info("writeBackToKnowledgeBase: 已写回 {} 条切片 metadata 到 {}", upserts.size(), graphProperties.getCollectionNames().getContentCollectionName());
     }

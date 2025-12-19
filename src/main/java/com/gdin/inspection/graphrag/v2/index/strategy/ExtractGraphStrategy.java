@@ -3,8 +3,6 @@ package com.gdin.inspection.graphrag.v2.index.strategy;
 import lombok.Builder;
 import lombok.Value;
 
-import java.util.List;
-
 @Value
 @Builder
 public class ExtractGraphStrategy {
@@ -23,4 +21,6 @@ public class ExtractGraphStrategy {
 
     /** 对齐 Python defaults: "<|COMPLETE|>" */
     String completionDelimiter;
+
+    Integer concurrentRequests;
 }

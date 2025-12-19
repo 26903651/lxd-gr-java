@@ -32,9 +32,13 @@ public class GraphProperties implements Serializable {
 
         @Data
         public static class Standard implements Serializable {
+            // =============== 通用 ================
+            // 并发请求数
+            private Integer concurrentRequests = 5;
+
             // =============== extract_graph ================
             // 补抽轮数（0=不补抽）
-            private Integer maxGleanings = 2;
+            private Integer maxGleanings = 1;
             // 输出协议
             private String tupleDelimiter = "<|>";
             private String recordDelimiter = "##";
@@ -44,8 +48,8 @@ public class GraphProperties implements Serializable {
             // 实体类型
             private List<String> entityTypes = List.of("组织", "人员", "地理位置", "事件", "时间");
             // 摘要长度控制
-            private Integer entitySummaryMaxWords = 200;
-            private Integer relationshipSummaryMaxWords = 200;
+            private Integer entitySummaryMaxWords = 500;
+            private Integer relationshipSummaryMaxWords = 500;
 
             // =============== extract_covariates ================
             // 是否启用 claims/covariates 抽取
@@ -53,7 +57,7 @@ public class GraphProperties implements Serializable {
             // 抽取的业务定义
             private String claimsDescription = "任何可能与信息发现相关的主张或事实";
             // 补抽轮数（0=不补抽）
-            private Integer claimsMaxGleanings = 2;
+            private Integer claimsMaxGleanings = 1;
             // 输出协议
             private String claimsTupleDelimiter = "<|>";
             private String claimsRecordDelimiter = "##";
@@ -67,11 +71,13 @@ public class GraphProperties implements Serializable {
             // 聚类参数
             private Integer maxClusterSize = 50;
             private Boolean useLcc = true;
-            private Integer clusterSeed = 42;
+            private Integer clusterSeed = 0xDEADBEEF & 0x7FFFFFFF;
 
             // =============== create_community_reports ================
+            // 上下文最大长度
+            private Integer maxContextTokens = 8000;
             // 社区报告长度
-            private Integer maxReportLength = 1200;
+            private Integer maxReportLength = 2000;
         }
     }
 
