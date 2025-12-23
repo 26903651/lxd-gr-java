@@ -21,6 +21,7 @@ public class CreateFinalTextUnitsWorkflow {
     private KnowledgeSliceWriteBackService writeBackService;
 
     public List<TextUnit> run(
+            int scope,
             List<TextUnit> textUnits,
             List<Entity> entities,
             List<Relationship> relationships,
@@ -41,7 +42,7 @@ public class CreateFinalTextUnitsWorkflow {
         List<TextUnit> finalTextUnits = createFinalTextUnitsOperation.createFinalTextUnits(textUnits, entities, relationships, covariates);
 
         // 写回知识库切片
-        writeBackService.writeBackToKnowledgeBase(finalTextUnits);
+        writeBackService.writeBackToKnowledgeBase(scope, finalTextUnits);
 
         return finalTextUnits;
     }

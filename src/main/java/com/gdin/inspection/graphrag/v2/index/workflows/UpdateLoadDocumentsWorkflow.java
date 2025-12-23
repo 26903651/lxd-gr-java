@@ -12,7 +12,7 @@ import java.util.List;
 
 @Slf4j
 @Service
-public class LoadUpdateDocumentsWorkflow {
+public class UpdateLoadDocumentsWorkflow {
 
     @Resource
     private LoadInputDocumentsWorkflow loadInputDocumentsWorkflow;
@@ -30,7 +30,6 @@ public class LoadUpdateDocumentsWorkflow {
             return Collections.emptyList();
         }
 
-//        ctx.put("delta_text_units", deltaTextUnits);
         log.info("加载增量文档完成: updateDocs={}, deltaTextUnits={}", updateDocumentIds.size(), deltaTextUnits.size());
 
         return deltaTextUnits;

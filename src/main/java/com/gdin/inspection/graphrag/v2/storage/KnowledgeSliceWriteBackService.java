@@ -36,7 +36,7 @@ public class KnowledgeSliceWriteBackService {
      *
      * 注意：这里假设 TextUnit.id 就是知识库切片的主键 id（强烈建议你在 LoadInputDocumentsWorkflow 查询时把 outputFields 加上 "id" 并用它赋值 TextUnit.id）
      */
-    public void writeBackToKnowledgeBase(List<TextUnit> finalTextUnits) {
+    public void writeBackToKnowledgeBase(int scope, List<TextUnit> finalTextUnits) {
         if (CollectionUtil.isEmpty(finalTextUnits)) return;
 
         // 1) 建 docId -> finalTextUnit 映射
@@ -63,7 +63,7 @@ public class KnowledgeSliceWriteBackService {
             filter.deleteCharAt(filter.length() - 1);
             filter.append("]");
             String queryJson = milvusSearchService.query(MilvusQueryReq.builder()
-                    .collectionName(graphProperties.getCollectionNames().getContentCollectionName())
+                    .collectionName(graphProperties.getCollectionNames().getMain().getContentCollectionName())
                     .filter(filter.toString())
                     .outputFields(List.of("id", "metadata", "extra", "graph_main", "graph_document_ids", "graph_entity_ids", "graph_relationship_ids", "graph_covariate_ids"))
                     .build());
@@ -79,7 +79,7 @@ public class KnowledgeSliceWriteBackService {
             if (finalTu == null) continue;
 
             JsonObject extra = row.has("extra") ? row.getAsJsonObject("extra") : new JsonObject();
-            extra.addProperty("graph", 1);
+            extra.addProperty("graph", scope);
 
             JsonObject graphMain = row.has("graph_main") ? row.getAsJsonObject("graph_main") : new JsonObject();
             graphMain.addProperty("human_readable_id", finalTu.getHumanReadableId() == null ? -1 : finalTu.getHumanReadableId());
@@ -105,13 +105,13 @@ public class KnowledgeSliceWriteBackService {
         // 4) upsert 回去
         for (JsonObject upsertRow : upserts) {
             milvusUpsertService.updateEntity(MilvusUpsertReq.builder()
-                    .collectionName(graphProperties.getCollectionNames().getContentCollectionName())
+                    .collectionName(graphProperties.getCollectionNames().getMain().getContentCollectionName())
                     .id(upsertRow.getAsJsonPrimitive("id").getAsLong())
                     .valueMap((Map)upsertRow.asMap())
                     .build());
         }
 
-        log.info("writeBackToKnowledgeBase: 已写回 {} 条切片 metadata 到 {}", upserts.size(), graphProperties.getCollectionNames().getContentCollectionName());
+        log.info("writeBackToKnowledgeBase: 已写回 {} 条切片 metadata 到 {}", upserts.size(), graphProperties.getCollectionNames().getMain().getContentCollectionName());
     }
 
     private JsonArray toJsonArray(List<String> list) {

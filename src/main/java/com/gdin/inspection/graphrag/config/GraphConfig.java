@@ -37,8 +37,13 @@ public class GraphConfig {
     }
 
     private void initEntity() {
+        initEntity(graphProperties.getCollectionNames().getMain().getEntityCollectionName());
+        initEntity(graphProperties.getCollectionNames().getDelta().getEntityCollectionName());
+    }
+
+    private void initEntity(String collectionName) {
         if (Boolean.FALSE.equals(milvusClientV2.hasCollection(HasCollectionReq.builder()
-                .collectionName(graphProperties.getCollectionNames().getEntityCollectionName())
+                .collectionName(collectionName)
                 .build()))) {
             CreateCollectionReq.CollectionSchema schema = MilvusClientV2.CreateSchema();
             // 内置主键 - id
@@ -115,7 +120,7 @@ public class GraphConfig {
             List<IndexParam> indexParams = new ArrayList<>();
             indexParams.add(vectorIndex);
             CreateCollectionReq createCollectionReq = CreateCollectionReq.builder()
-                    .collectionName(graphProperties.getCollectionNames().getEntityCollectionName())
+                    .collectionName(collectionName)
                     .collectionSchema(schema)
                     .indexParams(indexParams)
                     .build();
@@ -124,8 +129,13 @@ public class GraphConfig {
     }
 
     private void initRelationship() {
+        initRelationship(graphProperties.getCollectionNames().getMain().getRelationshipCollectionName());
+        initRelationship(graphProperties.getCollectionNames().getDelta().getRelationshipCollectionName());
+    }
+
+    private void initRelationship(String collectionName) {
         if (Boolean.FALSE.equals(milvusClientV2.hasCollection(HasCollectionReq.builder()
-                .collectionName(graphProperties.getCollectionNames().getRelationshipCollectionName())
+                .collectionName(collectionName)
                 .build()))) {
             CreateCollectionReq.CollectionSchema schema = MilvusClientV2.CreateSchema();
             // 内置主键 - id
@@ -190,7 +200,7 @@ public class GraphConfig {
             List<IndexParam> indexParams = new ArrayList<>();
             indexParams.add(vectorIndex);
             CreateCollectionReq createCollectionReq = CreateCollectionReq.builder()
-                    .collectionName(graphProperties.getCollectionNames().getRelationshipCollectionName())
+                    .collectionName(collectionName)
                     .collectionSchema(schema)
                     .indexParams(indexParams)
                     .build();
@@ -199,8 +209,13 @@ public class GraphConfig {
     }
 
     private void initCommunity() {
+        initCommunity(graphProperties.getCollectionNames().getMain().getCommunityCollectionName());
+        initCommunity(graphProperties.getCollectionNames().getDelta().getCommunityCollectionName());
+    }
+
+    private void initCommunity(String collectionName) {
         if (Boolean.FALSE.equals(milvusClientV2.hasCollection(HasCollectionReq.builder()
-                .collectionName(graphProperties.getCollectionNames().getCommunityCollectionName())
+                .collectionName(collectionName)
                 .build()))) {
             CreateCollectionReq.CollectionSchema schema = MilvusClientV2.CreateSchema();
             // 内置主键 - id
@@ -285,7 +300,7 @@ public class GraphConfig {
             List<IndexParam> indexParams = new ArrayList<>();
             indexParams.add(vectorIndex);
             CreateCollectionReq createCollectionReq = CreateCollectionReq.builder()
-                    .collectionName(graphProperties.getCollectionNames().getCommunityCollectionName())
+                    .collectionName(collectionName)
                     .collectionSchema(schema)
                     .indexParams(indexParams)
                     .build();
@@ -294,8 +309,13 @@ public class GraphConfig {
     }
 
     private void initCommunityReport() {
+        initCommunityReport(graphProperties.getCollectionNames().getMain().getCommunityReportCollectionName());
+        initCommunityReport(graphProperties.getCollectionNames().getDelta().getCommunityReportCollectionName());
+    }
+
+    private void initCommunityReport(String collectionName) {
         if (Boolean.FALSE.equals(milvusClientV2.hasCollection(HasCollectionReq.builder()
-                .collectionName(graphProperties.getCollectionNames().getCommunityReportCollectionName())
+                .collectionName(collectionName)
                 .build()))) {
             CreateCollectionReq.CollectionSchema schema = MilvusClientV2.CreateSchema();
             // 内置主键 - id
@@ -398,7 +418,7 @@ public class GraphConfig {
             List<IndexParam> indexParams = new ArrayList<>();
             indexParams.add(vectorIndex);
             CreateCollectionReq createCollectionReq = CreateCollectionReq.builder()
-                    .collectionName(graphProperties.getCollectionNames().getCommunityReportCollectionName())
+                    .collectionName(collectionName)
                     .collectionSchema(schema)
                     .indexParams(indexParams)
                     .build();
@@ -407,8 +427,13 @@ public class GraphConfig {
     }
 
     private void initCovariate() {
+        initCovariate(graphProperties.getCollectionNames().getMain().getCovariateCollectionName());
+        initCovariate(graphProperties.getCollectionNames().getDelta().getCovariateCollectionName());
+    }
+
+    private void initCovariate(String collectionName) {
         if (Boolean.FALSE.equals(milvusClientV2.hasCollection(HasCollectionReq.builder()
-                .collectionName(graphProperties.getCollectionNames().getCovariateCollectionName())
+                .collectionName(collectionName)
                 .build()))) {
             CreateCollectionReq.CollectionSchema schema = MilvusClientV2.CreateSchema();
             // 内置主键 - id
@@ -503,7 +528,7 @@ public class GraphConfig {
             List<IndexParam> indexParams = new ArrayList<>();
             indexParams.add(vectorIndex);
             CreateCollectionReq createCollectionReq = CreateCollectionReq.builder()
-                    .collectionName(graphProperties.getCollectionNames().getCovariateCollectionName())
+                    .collectionName(collectionName)
                     .collectionSchema(schema)
                     .indexParams(indexParams)
                     .build();

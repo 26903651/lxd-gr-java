@@ -18,12 +18,27 @@ public class GraphProperties implements Serializable {
 
     @Data
     public static class CollectionNames implements Serializable {
-        private String entityCollectionName = "GRAPH_RAG_ENTITY";
-        private String relationshipCollectionName = "GRAPH_RAG_RELATIONSHIP";
-        private String communityCollectionName = "GRAPH_RAG_COMMUNITY";
-        private String communityReportCollectionName = "GRAPH_RAG_COMMUNITY_REPORT";
-        private String covariateCollectionName = "GRAPH_RAG_COVARIATE";
-        private String contentCollectionName = "AP_KNOWLEDGE_CONTENT_DEV";
+        private Main main = new Main();
+        private Delta delta = new Delta();
+
+        @Data
+        public static class Main implements Serializable {
+            private String entityCollectionName = "GRAPH_RAG_ENTITY";
+            private String relationshipCollectionName = "GRAPH_RAG_RELATIONSHIP";
+            private String communityCollectionName = "GRAPH_RAG_COMMUNITY";
+            private String communityReportCollectionName = "GRAPH_RAG_COMMUNITY_REPORT";
+            private String covariateCollectionName = "GRAPH_RAG_COVARIATE";
+            private String contentCollectionName = "AP_KNOWLEDGE_CONTENT_DEV";
+        }
+
+        @Data
+        public static class Delta implements Serializable {
+            private String entityCollectionName = "GRAPH_RAG_DELTA_ENTITY";
+            private String relationshipCollectionName = "GRAPH_RAG_DELTA_RELATIONSHIP";
+            private String communityCollectionName = "GRAPH_RAG_DELTA_COMMUNITY";
+            private String communityReportCollectionName = "GRAPH_RAG_DELTA_COMMUNITY_REPORT";
+            private String covariateCollectionName = "GRAPH_RAG_DELTA_COVARIATE";
+        }
     }
 
     @Data

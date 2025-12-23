@@ -18,19 +18,19 @@ public class LoadPreviousIndexWorkflow {
     @Resource
     private GraphRagIndexStorage storage;
 
-    public Result run() {
-        return run(true, true, true, true, true, true);
+    public Result run(int scope) {
+        return run(scope, true, true, true, true, true, true);
     }
 
-    public Result run(boolean textUnits, boolean entities, boolean relationships, boolean communities, boolean communityReports, boolean covariates) {
+    public Result run(int scope, boolean textUnits, boolean entities, boolean relationships, boolean communities, boolean communityReports, boolean covariates) {
         log.info("开始加载旧索引");
 
-        List<TextUnit> oldTextUnits = textUnits ? storage.loadTextUnits() : null;
-        List<Entity> oldEntities = entities ? storage.loadEntities() : null;
-        List<Relationship> oldRelationships = relationships ? storage.loadRelationships() : null;
-        List<Community> oldCommunities = communities ? storage.loadCommunities() : null;
-        List<CommunityReport> oldReports = communityReports ? storage.loadCommunityReports() : null;
-        List<Covariate> oldCovariates = covariates ? storage.loadCovariates() : null;
+        List<TextUnit> oldTextUnits = textUnits ? storage.loadTextUnits(scope) : null;
+        List<Entity> oldEntities = entities ? storage.loadEntities(scope) : null;
+        List<Relationship> oldRelationships = relationships ? storage.loadRelationships(scope) : null;
+        List<Community> oldCommunities = communities ? storage.loadCommunities(scope) : null;
+        List<CommunityReport> oldReports = communityReports ? storage.loadCommunityReports(scope) : null;
+        List<Covariate> oldCovariates = covariates ? storage.loadCovariates(scope) : null;
 
         log.info(
                 "已加载旧索引: textUnits={}, entities={}, relationships={}, communities={}, reports={}, covariates={}",
@@ -53,7 +53,7 @@ public class LoadPreviousIndexWorkflow {
         private List<Entity> entities;
         private List<Relationship> relationships;
         private List<Community> communities;
-        private List<CommunityReport> reports;
+        private List<CommunityReport> communityReports;
         private List<Covariate> covariates;
     }
 }

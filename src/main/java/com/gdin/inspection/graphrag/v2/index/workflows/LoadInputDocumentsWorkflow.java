@@ -16,11 +16,6 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.util.*;
 
-/**
- * LoadInputDocumentsWorkflow: 负责把 Document 切分成 TextUnit 并持久化到 TextUnitRepository。
- *
- * 语义和 Python 版本一致：这里只做切分与保存，不分配 human_readable_id（由 finalize 负责）。
- */
 @Slf4j
 @Service
 public class LoadInputDocumentsWorkflow {
@@ -55,7 +50,7 @@ public class LoadInputDocumentsWorkflow {
         filter.deleteCharAt(filter.length() - 1);
         filter.append("]");
         String queryResult = milvusSearchService.query(MilvusQueryReq.builder()
-                .collectionName(graphProperties.getCollectionNames().getContentCollectionName())
+                .collectionName(graphProperties.getCollectionNames().getMain().getContentCollectionName())
                 .filter(filter.toString())
                 .outputFields(List.of("metadata", "page_content"))
                 .build());

@@ -2,6 +2,7 @@ package com.gdin.inspection.graphrag.v2.index.pipeline;
 
 import com.gdin.inspection.graphrag.v2.index.workflows.*;
 import com.gdin.inspection.graphrag.v2.models.*;
+import com.gdin.inspection.graphrag.v2.storage.GraphRagIndexStorage;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
@@ -67,6 +68,7 @@ public class StandardPipelineRegistrar {
         // 2.5) persist_temp_graph
         factory.register("persist_temp_graph", (cfg, ctx) -> {
             persistIndexWorkflow.run(
+                    GraphRagIndexStorage.SCOPE_MAIN,
                     null,
                     ctx.get("entities"),
                     ctx.get("relationships"),
@@ -100,6 +102,7 @@ public class StandardPipelineRegistrar {
         // 3.5) persist_temp_covariates
         factory.register("persist_temp_covariates", (cfg, ctx) -> {
             persistIndexWorkflow.run(
+                    GraphRagIndexStorage.SCOPE_MAIN,
                     null,
                     null,
                     null,
@@ -128,6 +131,7 @@ public class StandardPipelineRegistrar {
         // 4.5) persist_temp_communities
         factory.register("persist_temp_communities", (cfg, ctx) -> {
             persistIndexWorkflow.run(
+                    GraphRagIndexStorage.SCOPE_MAIN,
                     null,
                     null,
                     null,
@@ -142,6 +146,7 @@ public class StandardPipelineRegistrar {
         // 5) create_final_text_units
         factory.register("create_final_text_units", (cfg, ctx) -> {
             List<TextUnit> textUnit = createFinalTextUnitsWorkflow.run(
+                    GraphRagIndexStorage.SCOPE_MAIN,
                     ctx.get("text_units"),
                     ctx.get("entities"),
                     ctx.get("relationships"),
@@ -171,6 +176,7 @@ public class StandardPipelineRegistrar {
         // 7) persist_index
         factory.register("persist_index", (cfg, ctx) -> {
             persistIndexWorkflow.run(
+                    GraphRagIndexStorage.SCOPE_MAIN,
                     ctx.get("text_units"),
                     ctx.get("entities"),
                     ctx.get("relationships"),
@@ -184,7 +190,7 @@ public class StandardPipelineRegistrar {
 
         // load_temp_graph
         factory.register("load_temp_graph", (cfg, ctx) -> {
-            LoadPreviousIndexWorkflow.Result result = loadPreviousIndexWorkflow.run(false, true, true, false, false, false);
+            LoadPreviousIndexWorkflow.Result result = loadPreviousIndexWorkflow.run(GraphRagIndexStorage.SCOPE_MAIN, false, true, true, false, false, false);
             ctx.put("entities", result.getEntities());
             ctx.put("relationships", result.getRelationships());
             return WorkflowFunctionOutput.builder().result("load_temp_graph_done").build();
@@ -192,14 +198,14 @@ public class StandardPipelineRegistrar {
 
         // load_temp_covariates
         factory.register("load_temp_covariates", (cfg, ctx) -> {
-            LoadPreviousIndexWorkflow.Result result = loadPreviousIndexWorkflow.run(false, false, false, false, false, true);
+            LoadPreviousIndexWorkflow.Result result = loadPreviousIndexWorkflow.run(GraphRagIndexStorage.SCOPE_MAIN, false, false, false, false, false, true);
             ctx.put("covariates", result.getCovariates());
             return WorkflowFunctionOutput.builder().result("load_temp_covariates_done").build();
         });
 
         // load_temp_communities
         factory.register("load_temp_communities", (cfg, ctx) -> {
-            LoadPreviousIndexWorkflow.Result result = loadPreviousIndexWorkflow.run(false, false, false, true, false, false);
+            LoadPreviousIndexWorkflow.Result result = loadPreviousIndexWorkflow.run(GraphRagIndexStorage.SCOPE_MAIN, false, false, false, true, false, false);
             ctx.put("communities", result.getCommunities());
             return WorkflowFunctionOutput.builder().result("load_temp_communities_done").build();
         });

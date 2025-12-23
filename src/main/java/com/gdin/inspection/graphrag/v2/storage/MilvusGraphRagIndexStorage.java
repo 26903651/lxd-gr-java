@@ -60,7 +60,7 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
 
     /* ========== entities.parquet -> ENTITY_COLLECTION ========== */
 
-    public void saveEntities(List<Entity> entities) {
+    public void saveEntities(int scope, List<Entity> entities) {
         if (CollectionUtil.isEmpty(entities)) {
             log.info("saveEntities: 没有实体需要写入");
             return;
@@ -85,17 +85,25 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
             rows.add(obj);
         }
 
+        String collectionName;
+        if(scope==SCOPE_MAIN) collectionName = graphProperties.getCollectionNames().getMain().getEntityCollectionName();
+        else if(scope==SCOPE_DELTA) collectionName = graphProperties.getCollectionNames().getDelta().getEntityCollectionName();
+        else throw new RuntimeException("Unknown scope");
         try {
-            milvusUtil.insertByBatch(graphProperties.getCollectionNames().getEntityCollectionName(), rows);
+            milvusUtil.insertByBatch(collectionName, rows);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        log.info("saveEntities: 已写入 {} 条实体到 {}", rows.size(), graphProperties.getCollectionNames().getEntityCollectionName());
+        log.info("saveEntities: 已写入 {} 条实体到 {} ", rows.size(), collectionName);
     }
 
     @Override
-    public List<Entity> loadEntities() {
-        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getCollectionNames().getEntityCollectionName(), List.of("id", "human_readable_id", "title", "type", "description", "text_unit_ids", "frequency", "degree", "x", "y"));
+    public List<Entity> loadEntities(int scope) {
+        String collectionName;
+        if(scope==SCOPE_MAIN) collectionName = graphProperties.getCollectionNames().getMain().getEntityCollectionName();
+        else if(scope==SCOPE_DELTA) collectionName = graphProperties.getCollectionNames().getDelta().getEntityCollectionName();
+        else throw new RuntimeException("Unknown scope");
+        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(collectionName, List.of("id", "human_readable_id", "title", "type", "description", "text_unit_ids", "frequency", "degree", "x", "y"));
         try {
             List<Entity> entities = rowRecordsToModels(rowRecords, Entity.class);
             entities.sort(Comparator.comparingInt(t -> t.getHumanReadableId() == null ? -1 : t.getHumanReadableId()));
@@ -107,7 +115,7 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
 
     /* ========== relationships.parquet -> RELATIONSHIP_COLLECTION ========== */
 
-    public void saveRelationships(List<Relationship> relationships) {
+    public void saveRelationships(int scope, List<Relationship> relationships) {
         if (CollectionUtil.isEmpty(relationships)) {
             log.info("saveRelationships: 没有关系需要写入");
             return;
@@ -130,17 +138,25 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
             rows.add(obj);
         }
 
+        String collectionName;
+        if(scope==SCOPE_MAIN) collectionName = graphProperties.getCollectionNames().getMain().getRelationshipCollectionName();
+        else if(scope==SCOPE_DELTA) collectionName = graphProperties.getCollectionNames().getDelta().getRelationshipCollectionName();
+        else throw new RuntimeException("Unknown scope");
         try {
-            milvusUtil.insertByBatch(graphProperties.getCollectionNames().getRelationshipCollectionName(), rows);
+            milvusUtil.insertByBatch(collectionName, rows);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        log.info("saveRelationships: 已写入 {} 条关系到 {}", rows.size(), graphProperties.getCollectionNames().getRelationshipCollectionName());
+        log.info("saveRelationships: 已写入 {} 条关系到 {}", rows.size(), collectionName);
     }
 
     @Override
-    public List<Relationship> loadRelationships() {
-        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getCollectionNames().getRelationshipCollectionName(), List.of("id", "human_readable_id", "source", "target", "description", "weight", "combined_degree", "text_unit_ids"));
+    public List<Relationship> loadRelationships(int scope) {
+        String collectionName;
+        if(scope==SCOPE_MAIN) collectionName = graphProperties.getCollectionNames().getMain().getRelationshipCollectionName();
+        else if(scope==SCOPE_DELTA) collectionName = graphProperties.getCollectionNames().getDelta().getRelationshipCollectionName();
+        else throw new RuntimeException("Unknown scope");
+        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(collectionName, List.of("id", "human_readable_id", "source", "target", "description", "weight", "combined_degree", "text_unit_ids"));
         try {
             List<Relationship> relationships = rowRecordsToModels(rowRecords, Relationship.class);
             relationships.sort(Comparator.comparingInt(t -> t.getHumanReadableId() == null ? -1 : t.getHumanReadableId()));
@@ -151,11 +167,11 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
     }
 
     @Override
-    public List<TextUnit> loadTextUnits() {
+    public List<TextUnit> loadTextUnits(int scope) {
         try {
             List<TextUnit> textUnits = new ArrayList<>();
-            String filter = "extra[\"graph\"] == 1";
-            List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getCollectionNames().getContentCollectionName(), List.of("metadata", "page_content", "graph_main", "graph_document_ids", "graph_entity_ids", "graph_relationship_ids", "graph_covariate_ids"), filter);
+            String filter = "extra[\"graph\"] == " + scope;
+            List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getCollectionNames().getMain().getContentCollectionName(), List.of("metadata", "page_content", "graph_main", "graph_document_ids", "graph_entity_ids", "graph_relationship_ids", "graph_covariate_ids"), filter);
             for (QueryResultsWrapper.RowRecord rowRecord : rowRecords) {
                 Map<String, Object> fieldValues = rowRecord.getFieldValues();
                 String pageContent = (String) fieldValues.get("page_content");
@@ -189,13 +205,13 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
     }
 
     @Override
-    public List<Document> loadDocuments() {
+    public List<Document> loadDocuments(int scope) {
         throw new RuntimeException("不应该被调用, 没有必要使用这个方法");
     }
 
     /* ========== communities.parquet -> COMMUNITY_COLLECTION ========== */
 
-    public void saveCommunities(List<Community> communities) {
+    public void saveCommunities(int scope, List<Community> communities) {
         if (CollectionUtil.isEmpty(communities)) {
             log.info("saveCommunities: 没有社区需要写入");
             return;
@@ -222,17 +238,25 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
             rows.add(obj);
         }
 
+        String collectionName;
+        if(scope==SCOPE_MAIN) collectionName = graphProperties.getCollectionNames().getMain().getCommunityCollectionName();
+        else if(scope==SCOPE_DELTA) collectionName = graphProperties.getCollectionNames().getDelta().getCommunityCollectionName();
+        else throw new RuntimeException("Unknown scope");
         try {
-            milvusUtil.insertByBatch(graphProperties.getCollectionNames().getCommunityCollectionName(), rows);
+            milvusUtil.insertByBatch(collectionName, rows);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        log.info("saveCommunities: 已写入 {} 条社区到 {}", rows.size(), graphProperties.getCollectionNames().getCommunityCollectionName());
+        log.info("saveCommunities: 已写入 {} 条社区到 {}", rows.size(), collectionName);
     }
 
     @Override
-    public List<Community> loadCommunities() {
-        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getCollectionNames().getCommunityCollectionName(), List.of("id", "human_readable_id", "community", "level", "parent", "children", "title", "entity_ids", "relationship_ids", "text_unit_ids", "period", "size"));
+    public List<Community> loadCommunities(int scope) {
+        String collectionName;
+        if(scope==SCOPE_MAIN) collectionName = graphProperties.getCollectionNames().getMain().getCommunityCollectionName();
+        else if(scope==SCOPE_DELTA) collectionName = graphProperties.getCollectionNames().getDelta().getCommunityCollectionName();
+        else throw new RuntimeException("Unknown scope");
+        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(collectionName, List.of("id", "human_readable_id", "community", "level", "parent", "children", "title", "entity_ids", "relationship_ids", "text_unit_ids", "period", "size"));
         try {
             List<Community> communities = rowRecordsToModels(rowRecords, Community.class);
             communities.sort(Comparator.comparingInt(t -> t.getHumanReadableId() == null ? -1 : t.getHumanReadableId()));
@@ -244,7 +268,7 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
 
     /* ========== community_reports.parquet -> COMMUNITY_REPORT_COLLECTION ========== */
 
-    public void saveCommunityReports(List<CommunityReport> reports) {
+    public void saveCommunityReports(int scope, List<CommunityReport> reports) {
         if (CollectionUtil.isEmpty(reports)) {
             log.info("saveCommunityReports: 没有社区报告需要写入");
             return;
@@ -275,17 +299,25 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
             rows.add(obj);
         }
 
+        String collectionName;
+        if(scope==SCOPE_MAIN) collectionName = graphProperties.getCollectionNames().getMain().getCommunityReportCollectionName();
+        else if(scope==SCOPE_DELTA) collectionName = graphProperties.getCollectionNames().getDelta().getCommunityReportCollectionName();
+        else throw new RuntimeException("Unknown scope");
         try {
-            milvusUtil.insertByBatch(graphProperties.getCollectionNames().getCommunityReportCollectionName(), rows);
+            milvusUtil.insertByBatch(collectionName, rows);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        log.info("saveCommunityReports: 已写入 {} 条社区报告到 {}", rows.size(), graphProperties.getCollectionNames().getCommunityReportCollectionName());
+        log.info("saveCommunityReports: 已写入 {} 条社区报告到 {}", rows.size(), collectionName);
     }
 
     @Override
-    public List<CommunityReport> loadCommunityReports() {
-        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getCollectionNames().getCommunityReportCollectionName(), List.of("id", "human_readable_id", "community", "level", "parent", "children", "title", "summary", "full_content", "rank", "rating_explanation", "findings", "full_content_json", "period", "size"));
+    public List<CommunityReport> loadCommunityReports(int scope) {
+        String collectionName;
+        if(scope==SCOPE_MAIN) collectionName = graphProperties.getCollectionNames().getMain().getCommunityReportCollectionName();
+        else if(scope==SCOPE_DELTA) collectionName = graphProperties.getCollectionNames().getDelta().getCommunityReportCollectionName();
+        else throw new RuntimeException("Unknown scope");
+        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(collectionName, List.of("id", "human_readable_id", "community", "level", "parent", "children", "title", "summary", "full_content", "rank", "rating_explanation", "findings", "full_content_json", "period", "size"));
         try {
             List<CommunityReport> communityReports = rowRecordsToModels(rowRecords, CommunityReport.class);
             communityReports.sort(Comparator.comparingInt(t -> t.getHumanReadableId() == null ? -1 : t.getHumanReadableId()));
@@ -295,7 +327,7 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
         }
     }
 
-    public void saveCovariates(List<Covariate> covariates) {
+    public void saveCovariates(int scope, List<Covariate> covariates) {
         if (CollectionUtil.isEmpty(covariates)) {
             log.info("saveCovariates: 没有 covariates 需要写入");
             return;
@@ -326,17 +358,25 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
             rows.add(obj);
         }
 
+        String collectionName;
+        if(scope==SCOPE_MAIN) collectionName = graphProperties.getCollectionNames().getMain().getCovariateCollectionName();
+        else if(scope==SCOPE_DELTA) collectionName = graphProperties.getCollectionNames().getDelta().getCovariateCollectionName();
+        else throw new RuntimeException("Unknown scope");
         try {
-            milvusUtil.insertByBatch(graphProperties.getCollectionNames().getCovariateCollectionName(), rows);
+            milvusUtil.insertByBatch(collectionName, rows);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        log.info("saveCovariates: 已写入 {} 条到 {}", rows.size(), graphProperties.getCollectionNames().getCovariateCollectionName());
+        log.info("saveCovariates: 已写入 {} 条到 {}", rows.size(), collectionName);
     }
 
     @Override
-    public List<Covariate> loadCovariates() {
-        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(graphProperties.getCollectionNames().getCovariateCollectionName(), List.of("id", "human_readable_id", "covariate_type", "type", "description", "subject_id", "object_id", "status", "start_date", "end_date", "source_text", "text_unit_id"));
+    public List<Covariate> loadCovariates(int scope) {
+        String collectionName;
+        if(scope==SCOPE_MAIN) collectionName = graphProperties.getCollectionNames().getMain().getCovariateCollectionName();
+        else if(scope==SCOPE_DELTA) collectionName = graphProperties.getCollectionNames().getDelta().getCovariateCollectionName();
+        else throw new RuntimeException("Unknown scope");
+        List<QueryResultsWrapper.RowRecord> rowRecords = queryAllData(collectionName, List.of("id", "human_readable_id", "covariate_type", "type", "description", "subject_id", "object_id", "status", "start_date", "end_date", "source_text", "text_unit_id"));
         try {
             List<Covariate> covariates = rowRecordsToModels(rowRecords, Covariate.class);
             covariates.sort(Comparator.comparingInt(t -> t.getHumanReadableId() == null ? -1 : t.getHumanReadableId()));

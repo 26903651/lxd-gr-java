@@ -3,12 +3,13 @@ package com.gdin.inspection.graphrag.v2.models;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
+import lombok.Data;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
 
 import java.util.List;
 
-@Value
+@Data
 @Jacksonized
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
