@@ -4,9 +4,7 @@ import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.StrUtil;
 import com.gdin.inspection.graphrag.v2.index.opertation.extract.DescriptionSummaryExtractor;
 import com.gdin.inspection.graphrag.v2.models.Entity;
-import com.gdin.inspection.graphrag.v2.models.EntityDescriptionSummary;
 import com.gdin.inspection.graphrag.v2.models.Relationship;
-import com.gdin.inspection.graphrag.v2.models.RelationshipDescriptionSummary;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 

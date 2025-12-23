@@ -1,4 +1,4 @@
-package com.gdin.inspection.graphrag.v2.models;
+package com.gdin.inspection.graphrag.v2.index.opertation;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;

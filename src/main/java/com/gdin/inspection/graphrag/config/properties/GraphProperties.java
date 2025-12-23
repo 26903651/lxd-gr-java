@@ -13,7 +13,6 @@ import java.util.List;
 public class GraphProperties implements Serializable {
     private CollectionNames collectionNames = new CollectionNames();
     private Index index = new Index();
-
     private Leiden leiden = new Leiden();
 
     @Data
@@ -44,6 +43,7 @@ public class GraphProperties implements Serializable {
     @Data
     public static class Index implements Serializable {
         private Standard standard = new Standard();
+        private StandardUpdate standardUpdate = new StandardUpdate();
 
         @Data
         public static class Standard implements Serializable {
@@ -94,6 +94,8 @@ public class GraphProperties implements Serializable {
             // 社区报告长度
             private Integer maxReportLength = 2000;
         }
+
+        public static class StandardUpdate extends Standard {}
     }
 
     @Data

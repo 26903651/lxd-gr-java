@@ -204,11 +204,6 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
         }
     }
 
-    @Override
-    public List<Document> loadDocuments(int scope) {
-        throw new RuntimeException("不应该被调用, 没有必要使用这个方法");
-    }
-
     /* ========== communities.parquet -> COMMUNITY_COLLECTION ========== */
 
     public void saveCommunities(int scope, List<Community> communities) {

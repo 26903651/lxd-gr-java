@@ -2,7 +2,6 @@ package com.gdin.inspection.graphrag.v2.index.opertation;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.gdin.inspection.graphrag.v2.index.FindingModel;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;

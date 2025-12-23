@@ -35,8 +35,6 @@ public interface GraphRagIndexStorage {
 
     List<TextUnit> loadTextUnits(int scope);
 
-    List<Document> loadDocuments(int scope);
-
     // ===== 社区 & 报告 =====
 
     void saveCommunities(int scope, List<Community> communities);

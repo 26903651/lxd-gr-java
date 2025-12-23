@@ -58,4 +58,45 @@ public class GraphRagIndexRunner {
         Pipeline<Object> pipeline = factory.createPipeline(piplineName);
         return new RunPipeline<>().run(pipeline, null, ctx);
     }
+
+    public List<?> runStandardUpdate(List<String> documentIds) {
+        return runStandardUpdate(documentIds, "standard_update");
+    }
+
+    public List<?> runStandardUpdate(List<String> documentIds, String piplineName) {
+        PipelineRunContext ctx = new PipelineRunContext();
+
+        GraphProperties.Index.StandardUpdate standardUpdate = graphProperties.getIndex().getStandardUpdate();
+        ctx.put("concurrent_requests", standardUpdate.getConcurrentRequests());
+        // ==============update_load_delta_documents==============
+        ctx.put("update_document_ids", documentIds);
+        // ==============extract_graph==============
+        ctx.put("max_gleanings", standardUpdate.getMaxGleanings());
+        ctx.put("tuple_delimiter", standardUpdate.getTupleDelimiter());
+        ctx.put("record_delimiter", standardUpdate.getRecordDelimiter());
+        ctx.put("completion_delimiter", standardUpdate.getCompletionDelimiter());
+        if(standardUpdate.getExtractionPrompt()!=null) ctx.put("extraction_prompt", standardUpdate.getExtractionPrompt());
+        ctx.put("entity_types", standardUpdate.getEntityTypes());
+        ctx.put("entity_summary_max_words", standardUpdate.getEntitySummaryMaxWords());
+        ctx.put("relationship_summary_max_words", standardUpdate.getRelationshipSummaryMaxWords());
+        // ==============extract_covariates==============
+        ctx.put("claims_enabled", standardUpdate.getClaimsEnabled());
+        ctx.put("claims_description", standardUpdate.getClaimsDescription());
+        ctx.put("claims_max_gleanings", standardUpdate.getClaimsMaxGleanings());
+        ctx.put("claims_tuple_delimiter", standardUpdate.getClaimsTupleDelimiter());
+        ctx.put("claims_record_delimiter", standardUpdate.getClaimsRecordDelimiter());
+        ctx.put("claims_completion_delimiter", standardUpdate.getClaimsCompletionDelimiter());
+        ctx.put("claims_entity_types", standardUpdate.getClaimsEntityTypes());
+        if(standardUpdate.getClaimsExtractionPrompt()!=null) ctx.put("claims_extraction_prompt", standardUpdate.getClaimsExtractionPrompt());
+        // ==============extract_covariates==============
+        ctx.put("max_cluster_size", standardUpdate.getMaxClusterSize());
+        ctx.put("use_lcc", standardUpdate.getUseLcc());
+        ctx.put("cluster_seed", standardUpdate.getClusterSeed());
+        // ==============create_community_reports==============
+        ctx.put("max_context_tokens", standardUpdate.getMaxContextTokens());
+        ctx.put("max_report_length", standardUpdate.getMaxReportLength());
+
+        Pipeline<Object> pipeline = factory.createPipeline(piplineName);
+        return new RunPipeline<>().run(pipeline, null, ctx);
+    }
 }

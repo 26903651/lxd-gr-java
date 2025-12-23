@@ -1,4 +1,4 @@
-package com.gdin.inspection.graphrag.v2.index;
+package com.gdin.inspection.graphrag.v2.index.opertation;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -10,17 +10,14 @@ import lombok.extern.jackson.Jacksonized;
 @Jacksonized
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class FindingModel {
+public class RelationshipDescriptionSummary {
 
-    /**
-     * 单条发现的简短摘要。
-     */
+    @JsonProperty("source_entity_id")
+    String sourceEntityId;
+
+    @JsonProperty("target_entity_id")
+    String targetEntityId;
+
     @JsonProperty("summary")
     String summary;
-
-    /**
-     * 对该发现的详细解释。
-     */
-    @JsonProperty("explanation")
-    String explanation;
 }

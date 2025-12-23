@@ -23,4 +23,10 @@ public class IndexTest {
         graphRagIndexRunner.runStandard(List.of("9c3c1d6b-fd37-42b9-8b33-132da0beb6cd"), "standard-test");
         // graphRagIndexRunner.runStandard(List.of("9c3c1d6b-fd37-42b9-8b33-132da0beb6cd"));
     }
+
+    @Test
+    void testStandardUpdate() throws Exception {
+        graphRagIndexRunner.runStandardUpdate(List.of("9c3c1d6b-fd37-42b9-8b33-132da0beb6cd"), "standard_update-test");
+        // graphRagIndexRunner.runStandardUpdate(List.of("9c3c1d6b-fd37-42b9-8b33-132da0beb6cd"));
+    }
 }
