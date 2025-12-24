@@ -214,11 +214,8 @@ public class StandardPipelineRegistrar {
         factory.registerPipeline("standard", List.of(
                 "load_input_documents",
                 "extract_graph",
-                "persist_temp_graph",
                 "extract_covariates",
-                "persist_temp_covariates",
                 "create_communities",
-                "persist_temp_communities",
                 "create_final_text_units",
                 "create_community_reports",
                 "persist_index"

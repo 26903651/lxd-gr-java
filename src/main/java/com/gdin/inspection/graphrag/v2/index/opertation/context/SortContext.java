@@ -1,7 +1,7 @@
 package com.gdin.inspection.graphrag.v2.index.opertation.context;
 
 import com.gdin.inspection.graphrag.util.SpringBootUtil;
-import com.gdin.inspection.graphrag.v2.index.opertation.util.CsvUtil;
+import com.gdin.inspection.graphrag.v2.util.CsvUtil;
 import com.gdin.inspection.graphrag.v2.util.TokenUtil;
 
 import java.util.*;

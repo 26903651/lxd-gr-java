@@ -45,6 +45,10 @@ public class IOUtil {
         return simpleMapper;
     }
 
+    public static <T> T convertValueWithNoType(Object fromValue, Class<T> clazz) throws IOException {
+        return simpleMapper.convertValue(fromValue, clazz);
+    }
+
     public static <T> T convertValue(Object fromValue, Class<T> clazz) throws IOException {
         return objectMapper.convertValue(fromValue, clazz);
     }

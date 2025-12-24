@@ -2,6 +2,7 @@ package com.gdin.inspection.graphrag.v2.storage;
 
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.StrUtil;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.gdin.inspection.graphrag.config.properties.GraphProperties;
 import com.gdin.inspection.graphrag.util.IOUtil;
 import com.gdin.inspection.graphrag.util.MilvusUtil;
@@ -175,15 +176,15 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
             for (QueryResultsWrapper.RowRecord rowRecord : rowRecords) {
                 Map<String, Object> fieldValues = rowRecord.getFieldValues();
                 String pageContent = (String) fieldValues.get("page_content");
-                Map<String, Object> metadata = (Map<String, Object>) fieldValues.get("metadata");
-                Map<String, Object> graphMain = (Map<String, Object>) fieldValues.get("graph_main");
-                Integer humanReadableId = graphMain.containsKey("human_readable_id")? (Integer) graphMain.get("human_readable_id") : null;
-                int nTokens = graphMain.containsKey("n_tokens")? (Integer) graphMain.get("n_tokens") : tokenUtil.getTokenCount(pageContent);
-                String docId = (String) metadata.get("doc_id");
-                List<String> documentIds = IOUtil.convertValue(fieldValues.get("graph_document_ids"), List.class);
-                List<String> entityIds = IOUtil.convertValue(fieldValues.get("graph_entity_ids"), List.class);
-                List<String> relationshipIds = IOUtil.convertValue(fieldValues.get("graph_relationship_ids"), List.class);
-                List<String> covariateIds = IOUtil.convertValue(fieldValues.get("graph_covariate_ids"), List.class);
+                JsonObject metadata = (JsonObject) fieldValues.get("metadata");
+                JsonObject graphMain = (JsonObject) fieldValues.get("graph_main");
+                Integer humanReadableId = graphMain.has("human_readable_id") ? graphMain.getAsJsonPrimitive("human_readable_id").getAsInt() : null;
+                int nTokens = graphMain.has("n_tokens")? graphMain.getAsJsonPrimitive("n_tokens").getAsInt() : tokenUtil.getTokenCount(pageContent);
+                String docId = metadata.getAsJsonPrimitive("doc_id").getAsString();
+                List<String> documentIds = IOUtil.simpleMapper().readValue(gson.toJson(fieldValues.get("graph_document_ids")), new TypeReference<>() {});
+                List<String> entityIds = IOUtil.simpleMapper().readValue(gson.toJson(fieldValues.get("graph_entity_ids")), new TypeReference<>() {});
+                List<String> relationshipIds = IOUtil.simpleMapper().readValue(gson.toJson(fieldValues.get("graph_relationship_ids")), new TypeReference<>() {});
+                List<String> covariateIds = IOUtil.simpleMapper().readValue(gson.toJson(fieldValues.get("graph_covariate_ids")), new TypeReference<>() {});
                 textUnits.add(TextUnit.builder()
                         .id(docId)
                         .humanReadableId(humanReadableId)
@@ -463,7 +464,7 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
     }
 
     private void safeAddInstant(JsonObject obj, String field, Instant value) {
-        if (value != null) obj.addProperty(field, instantToMicros(value));
+        if (value != null) obj.addProperty(field, instantToMillis(value));
     }
 
     private void safeAddMetadata(JsonObject obj, String field, Map<String, Object> metadata) {
@@ -474,6 +475,13 @@ public class MilvusGraphRagIndexStorage implements GraphRagIndexStorage {
         } else if (tree != null) {
             obj.add(field, tree);
         }
+    }
+
+    /**
+     * 将 Instant 转换为毫秒精度的时间戳
+     */
+    public static long instantToMillis(Instant instant) {
+        return instant.toEpochMilli();
     }
 
     /**

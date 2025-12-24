@@ -20,13 +20,13 @@ public class IndexTest {
 
     @Test
     void testStandard() throws Exception {
-        graphRagIndexRunner.runStandard(List.of("9c3c1d6b-fd37-42b9-8b33-132da0beb6cd"), "standard-test");
-        // graphRagIndexRunner.runStandard(List.of("9c3c1d6b-fd37-42b9-8b33-132da0beb6cd"));
+        // graphRagIndexRunner.runStandard(List.of("9c3c1d6b-fd37-42b9-8b33-132da0beb6cd"), "standard-test");
+        graphRagIndexRunner.runStandard(List.of("9c3c1d6b-fd37-42b9-8b33-132da0beb6cd"));
     }
 
     @Test
     void testStandardUpdate() throws Exception {
-        graphRagIndexRunner.runStandardUpdate(List.of("9c3c1d6b-fd37-42b9-8b33-132da0beb6cd"), "standard_update-test");
-        // graphRagIndexRunner.runStandardUpdate(List.of("9c3c1d6b-fd37-42b9-8b33-132da0beb6cd"));
+        graphRagIndexRunner.runStandardUpdate(List.of("27e47085-0de9-4002-aaf6-9d9a7c790302"), "standard_update-test");
+        // graphRagIndexRunner.runStandardUpdate(List.of("27e47085-0de9-4002-aaf6-9d9a7c790302"));
     }
 }

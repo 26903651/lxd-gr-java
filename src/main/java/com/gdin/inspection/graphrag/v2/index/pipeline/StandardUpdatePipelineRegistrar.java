@@ -373,26 +373,47 @@ public class StandardUpdatePipelineRegistrar {
 
 
         // update_load_temp_graph
-        factory.register("update_load_temp_graph", (cfg, ctx) -> {
+        factory.register("update_load_temp_delta_graph", (cfg, ctx) -> {
             LoadPreviousIndexWorkflow.Result result = loadPreviousIndexWorkflow.run(GraphRagIndexStorage.SCOPE_DELTA, false, true, true, false, false, false);
             ctx.put("delta_entities", result.getEntities());
             ctx.put("delta_relationships", result.getRelationships());
-            return WorkflowFunctionOutput.builder().result("update_load_temp_graph_done").build();
+            return WorkflowFunctionOutput.builder().result("update_load_temp_delta_graph_done").build();
         });
 
         // update_load_temp_covariates
-        factory.register("update_load_temp_covariates", (cfg, ctx) -> {
+        factory.register("update_load_temp_delta_covariates", (cfg, ctx) -> {
             LoadPreviousIndexWorkflow.Result result = loadPreviousIndexWorkflow.run(GraphRagIndexStorage.SCOPE_DELTA, false, false, false, false, false, true);
             ctx.put("delta_covariates", result.getCovariates());
-            return WorkflowFunctionOutput.builder().result("update_load_temp_covariates_done").build();
+            return WorkflowFunctionOutput.builder().result("update_load_temp_delta_covariates_done").build();
         });
 
         // update_load_temp_communities
-        factory.register("update_load_temp_communities", (cfg, ctx) -> {
+        factory.register("update_load_temp_delta_communities", (cfg, ctx) -> {
             LoadPreviousIndexWorkflow.Result result = loadPreviousIndexWorkflow.run(GraphRagIndexStorage.SCOPE_DELTA, false, false, false, true, false, false);
             ctx.put("delta_communities", result.getCommunities());
-            return WorkflowFunctionOutput.builder().result("update_load_temp_communities_done").build();
+            return WorkflowFunctionOutput.builder().result("update_load_temp_delta_communities_done").build();
         });
+
+        // update_load_temp_delta_text_units
+        factory.register("update_load_temp_delta_text_units", (cfg, ctx) -> {
+            LoadPreviousIndexWorkflow.Result result = loadPreviousIndexWorkflow.run(GraphRagIndexStorage.SCOPE_DELTA, true, false, false, false, false, false);
+            ctx.put("delta_text_units", result.getTextUnits());
+            return WorkflowFunctionOutput.builder().result("update_load_temp_delta_text_units_done").build();
+        });
+
+        // update_load_temp_delta_index
+        factory.register("update_load_temp_delta_index", (cfg, ctx) -> {
+            LoadPreviousIndexWorkflow.Result result = loadPreviousIndexWorkflow.run(GraphRagIndexStorage.SCOPE_DELTA, true, true, true, true, true, true);
+            ctx.put("delta_text_units", result.getTextUnits());
+            ctx.put("delta_entities", result.getEntities());
+            ctx.put("delta_relationships", result.getRelationships());
+            ctx.put("delta_communities", result.getCommunities());
+            ctx.put("delta_community_reports", result.getCommunityReports());
+            ctx.put("delta_covariates", result.getCovariates());
+            return WorkflowFunctionOutput.builder().result("update_load_temp_delta_index_done").build();
+        });
+
+
 
         factory.registerPipeline("standard_update", List.of(
                 "update_load_delta_documents",
@@ -413,16 +434,21 @@ public class StandardUpdatePipelineRegistrar {
 
         factory.registerPipeline("standard_update-test", List.of(
                 "update_load_delta_documents",
-                "update_extract_delta_graph",
-                "update_persist_temp_delta_graph",
+                // "update_extract_delta_graph",
+                // "update_persist_temp_delta_graph",
+                "update_load_temp_delta_graph",
                 "update_extract_delta_covariates",
                 "update_persist_temp_delta_covariates",
-                "update_create_delta_communities",
-                "update_persist_temp_delta_communities",
+                // "update_load_temp_delta_covariates",
+                // "update_create_delta_communities",
+                // "update_persist_temp_delta_communities",
+                "update_load_temp_delta_communities",
                 "update_create_delta_final_text_units",
                 "update_persist_temp_delta_text_units",
+                // "update_load_temp_delta_text_units",
                 "update_create_delta_community_reports",
                 "update_persist_delta_index",
+                // "update_load_temp_delta_index",
                 "update_load_previous_index",
                 "update_merge_graph",
                 "update_persist_temp_merge_graph",

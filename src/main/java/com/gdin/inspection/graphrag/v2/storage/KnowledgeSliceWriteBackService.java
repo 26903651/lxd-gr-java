@@ -31,10 +31,51 @@ public class KnowledgeSliceWriteBackService {
     @Resource
     private MilvusUpsertService milvusUpsertService;
 
+    public void cleanKnowledgeSliceState(int scope) {
+        // 将textUnits中extra.graph=1的设置成extra.graph=0(模拟清除)
+        boolean hasUncleaned = true;
+        while(hasUncleaned) {
+            String filter = "extra[\"graph\"]==" + scope;
+            String queryJson = milvusSearchService.query(MilvusQueryReq.builder()
+                    .collectionName(graphProperties.getCollectionNames().getMain().getContentCollectionName())
+                    .filter(filter.toString())
+                    .outputFields(List.of("id"))
+                    .build());
+            JsonArray arr = JsonParser.parseString(queryJson).getAsJsonArray();
+            if(arr.isEmpty()){
+                hasUncleaned = false;
+                continue;
+            }
+            List<JsonObject> upserts = new ArrayList<>(arr.size());
+            JsonObject newJsonObj = new JsonObject();
+            JsonArray newJsonArr = new JsonArray();
+            for (JsonElement el : arr) {
+                JsonObject row = el.getAsJsonObject();
+                Long id = row.getAsJsonPrimitive("id").getAsLong();
+                JsonObject upsertRow = new JsonObject();
+                upsertRow.addProperty("id", id);
+                upsertRow.add("extra", newJsonObj);
+                upsertRow.add("graph_main", newJsonObj);
+                upsertRow.add("graph_document_ids", newJsonArr);
+                upsertRow.add("graph_entity_ids", newJsonArr);
+                upsertRow.add("graph_relationship_ids", newJsonArr);
+                upsertRow.add("graph_covariate_ids", newJsonArr);
+                upserts.add(upsertRow);
+            }
+            for (JsonObject upsertRow : upserts) {
+                milvusUpsertService.updateEntity(MilvusUpsertReq.builder()
+                        .collectionName(graphProperties.getCollectionNames().getMain().getContentCollectionName())
+                        .id(upsertRow.getAsJsonPrimitive("id").getAsLong())
+                        .valueMap((Map)upsertRow.asMap())
+                        .build());
+            }
+        }
+    }
+
     /**
-     * 把 finalTextUnits 生成的 entity_ids / relationship_ids / covariate_ids / human_readable_id 写回知识库切片 metadata。
+     * 把 finalTextUnits 生成的 entity_ids / relationship_ids / covariate_ids / human_readable_id 写回知识库切片。
      *
-     * 注意：这里假设 TextUnit.id 就是知识库切片的主键 id（强烈建议你在 LoadInputDocumentsWorkflow 查询时把 outputFields 加上 "id" 并用它赋值 TextUnit.id）
+     * 注意：TextUnit.id 就是知识库切片的doc_id
      */
     public void writeBackToKnowledgeBase(int scope, List<TextUnit> finalTextUnits) {
         if (CollectionUtil.isEmpty(finalTextUnits)) return;

@@ -15,6 +15,7 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -36,21 +37,25 @@ public class CommunityReportsExtractor {
                 .replace("{max_report_length}", String.valueOf(maxReportLength));
 
         String raw;
-        try {
-            String memoryId = IdUtil.getSnowflakeNextIdStr();
-            ThinkAssistant assistant = assistantGenerator.createTempAssistant(ThinkAssistant.class);
-            TokenStream tokenStream = assistant.streamChat(memoryId, prompt);
-            raw = SseUtil.getResponseWithoutThink(null, tokenStream, memoryId);
-        } catch (Exception e) {
-            log.error("error generating community report", e);
-            // Python：异常 => output=""
-            return CommunityReportsResult.builder()
-                    .structuredOutput(null)
-                    .output("")
-                    .build();
+        CommunityReportResponse structured = null;
+        boolean parsed = false;
+        while(!parsed){
+            try {
+                String memoryId = IdUtil.getSnowflakeNextIdStr();
+                ThinkAssistant assistant = assistantGenerator.createTempAssistant(ThinkAssistant.class);
+                TokenStream tokenStream = assistant.streamChat(memoryId, prompt);
+                raw = SseUtil.getResponseWithoutThink(null, tokenStream, memoryId);
+                structured = parseAndValidate(raw);
+                parsed = true;
+            } catch (Exception e) {
+                log.error("error generating community report, retry", e);
+                // Python：异常 => output=""
+                /*return CommunityReportsResult.builder()
+                        .structuredOutput(null)
+                        .output("")
+                        .build();*/
+            }
         }
-
-        CommunityReportResponse structured = parseAndValidate(raw);
         if (structured == null) {
             // Python：解析失败 => output=""
             return CommunityReportsResult.builder()
@@ -66,7 +71,7 @@ public class CommunityReportsExtractor {
                 .build();
     }
 
-    private CommunityReportResponse parseAndValidate(String raw) {
+    private CommunityReportResponse parseAndValidate(String raw) throws IOException {
         if (StrUtil.isBlank(raw)) return null;
 
         String json = JsonExtractors.extractFirstJsonObject(raw);
@@ -87,7 +92,7 @@ public class CommunityReportsExtractor {
             return r;
         } catch (Exception e) {
             log.warn("parse community report json failed", e);
-            return null;
+            throw e;
         }
     }
 

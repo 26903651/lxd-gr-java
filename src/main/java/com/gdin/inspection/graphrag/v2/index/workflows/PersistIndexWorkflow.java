@@ -81,6 +81,7 @@ public class PersistIndexWorkflow {
         if(CollectionUtil.isNotEmpty(covariates)) milvusDeleteService.deleteAll(covariateCollectionName);
         if(CollectionUtil.isNotEmpty(relationships)) milvusDeleteService.deleteAll(relationshipCollectionName);
         if(CollectionUtil.isNotEmpty(entities)) milvusDeleteService.deleteAll(entitiyCollectionName);
+        if(CollectionUtil.isNotEmpty(textUnits)) knowledgeSliceWriteBackService.cleanKnowledgeSliceState(scope);
 
         // 保存
         if(CollectionUtil.isNotEmpty(entities)) milvusStorage.saveEntities(scope, entities);

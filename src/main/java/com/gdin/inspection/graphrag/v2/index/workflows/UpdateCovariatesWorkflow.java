@@ -24,7 +24,7 @@ public class UpdateCovariatesWorkflow {
 
     public List<Covariate> run(List<Covariate> oldCovariates, List<Covariate> deltaCovariates) {
         // Python: 两边都 has_table 才更新；否则啥也不做
-        if (CollectionUtil.isNotEmpty(oldCovariates) && CollectionUtil.isNotEmpty(deltaCovariates)) {
+        if (CollectionUtil.isEmpty(oldCovariates) && CollectionUtil.isEmpty(deltaCovariates)) {
             log.info("covariates(main+delta) 都为空，不用更新");
             return List.of();
         }
