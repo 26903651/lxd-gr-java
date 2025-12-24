@@ -20,7 +20,7 @@ public class QueryTest {
     @Test
     void basicSearchTest() throws InterruptedException {
         BasicSearch.BasicStreamResult r = basicSearch.streamSearch(
-                "用户问题...",
+                "陪产假和看护假的区别是什么？",
                 10,
                 12_000,
                 null

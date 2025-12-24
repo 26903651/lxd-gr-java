@@ -56,10 +56,11 @@ public class BasicSearchContext {
             // 只拿 basic search 必需字段：metadata/doc_id, graph_main/human_readable_id, page_content
             List<String> outputFields = List.of("metadata", "graph_main", "page_content");
 
+            String finalFilter = filter==null ? "extra[\"graph\"]==1" : "extra[\"graph\"]==1 and " + filter;
             String json = milvusSearchService.semantic(MilvusSemanticSearchReq.builder()
                     .collectionName(collectionName)
                     .query(query)
-                    .filter(filter) // 可为空
+                    .filter(finalFilter)
                     .topK(topK)
                     .outputFields(outputFields)
                     .build());
